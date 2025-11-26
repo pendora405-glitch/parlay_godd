@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>Match Prediction Engine v2000000</title>
+<title>Match Prediction Engine v5000000</title>
 <style>
   body {
     font-family: system-ui, sans-serif;
@@ -66,7 +66,7 @@
 
 <body>
 
-<h1>Match Prediction Engine v2000000</h1>
+<h1>Match Prediction Engine v5000000</h1>
 
 <div class="section">
   <h2>Informasi Match</h2>
@@ -967,9 +967,9 @@
 
 })();
 </script>
-<!-- ============================================ -->
-<!-- PART 7: ABSOLUTE PROBABILITY ENGINE v2000000 -->
-<!-- ============================================ -->
+  <!-- =================================================== -->
+<!-- PART 7: MULTI-PHASE HYBRID ENGINE v5000000 (V20)   -->
+<!-- =================================================== -->
 <script>
 (function(){
   const V20 = window.V20 = window.V20 || {};
@@ -1022,15 +1022,109 @@
 
 
   /* ===========================================
-     2) HYBRID MONTE CARLO MULTI-SCENARIO
+     2) MULTI-PHASE HYBRID MONTE CARLO v5000000
+     - Pakai phase (early/mid/late) dari lambda.phases
+     - Multi-skenario paralel
+     - Hybrid Poisson + overdispersed
   =========================================== */
   V20.monteCarlo = function(lambda, ctx, simCount, scoreCap){
-    simCount = V20.clamp(simCount || 30000, 10000, 120000);
+    simCount = V20.clamp(simCount || 40000, 15000, 150000);
     scoreCap = V20.clamp(scoreCap || 5, 3, 8);
 
-    const lamH = lambda.lamH;
-    const lamA = lambda.lamA;
-    const lamTotalBase = lamH + lamA;
+    const lamH_base = lambda.lamH;
+    const lamA_base = lambda.lamA;
+    const lamTotalBase = lamH_base + lamA_base;
+
+    const phases = lambda.phases || {
+      early:1, mid:1, late:1,
+      wEarly:0.25,wMid:0.5,wLate:0.25
+    };
+
+    // normalisasi bobot phase
+    let wSum = phases.wEarly + phases.wMid + phases.wLate;
+    if (!wSum || !isFinite(wSum)) wSum = 1;
+    const phaseList = [
+      {name:"early", w:phases.wEarly/wSum, m:phases.early||1},
+      {name:"mid",   w:phases.wMid  /wSum, m:phases.mid  ||1},
+      {name:"late",  w:phases.wLate /wSum, m:phases.late ||1}
+    ];
+    // cumulative untuk pemilihan phase
+    let accP=0;
+    phaseList.forEach(p=>{
+      accP += p.w;
+      p.cum = accP;
+    });
+
+    function pickPhase(){
+      const r = Math.random();
+      for (let i=0;i<phaseList.length;i++){
+        if (r <= phaseList[i].cum) return phaseList[i];
+      }
+      return phaseList[phaseList.length-1];
+    }
+
+    // context normal
+    const normChaos = V20.clamp((ctx.chaos-3)/4, 0, 1);
+    const normTempo = V20.clamp((ctx.tempo-3)/4, 0, 1);
+    const normImp   = V20.clamp((ctx.importance-3)/4, 0, 1);
+    const ratioH    = lamH_base / (lamH_base+lamA_base);
+    const ratioA    = lamA_base / (lamH_base+lamA_base);
+
+    // skenario paralel
+    const scenarios = [
+      {name:"base",        w:0.35,                    fH:1.00, fA:1.00},
+      {name:"highChaos",   w:0.12 + 0.22*normChaos,   fH:1.18, fA:1.18},
+      {name:"lowChaos",    w:0.10 + 0.20*(1-normChaos), fH:0.80, fA:0.80},
+      {name:"homeFront",   w:0.08 + 0.12*ratioH,      fH:1.08, fA:0.96},
+      {name:"awayFront",   w:0.08 + 0.12*ratioA,      fH:0.96, fA:1.08},
+      {name:"parkedBus",   w:0.05 + 0.10*(1-normTempo), fH:0.70, fA:0.70},
+      {name:"latePush",    w:0.05 + 0.10*normImp,     fH:1.03, fA:1.03},
+      {name:"wideOpen",    w:0.05 + 0.10*(normTempo*normChaos), fH:1.22, fA:1.22}
+    ];
+
+    let wS=0;
+    scenarios.forEach(s=>{ wS += s.w; });
+    scenarios.forEach(s=>{ s.p = s.w / wS; });
+
+    const cumSc=[];
+    let acc=0;
+    for(let i=0;i<scenarios.length;i++){
+      acc += scenarios[i].p;
+      cumSc[i] = acc;
+    }
+
+    function pickScenario(){
+      const r = Math.random();
+      for(let i=0;i<cumSc.length;i++){
+        if (r <= cumSc[i]) return scenarios[i];
+      }
+      return scenarios[scenarios.length-1];
+    }
+
+    const scenarioCount = {};
+    scenarios.forEach(s=>scenarioCount[s.name]=0);
+
+    // sampler hybrid dengan tail sedikit lebih berat
+    function sampleHybrid(lambdaBase){
+      lambdaBase = Math.max(lambdaBase, 0.00001);
+      const r = Math.random();
+      if (r < 0.55){
+        // 55%: Poisson murni
+        return V20.samplePoisson(lambdaBase);
+      } else if (r < 0.85){
+        // 30%: overdispersed ringan
+        const spread = 0.6 + normChaos*0.6;
+        const factor = Math.exp((Math.random()-0.5)*spread);
+        const lamVar = V20.clamp(lambdaBase*factor, 0.05, 6.0);
+        return V20.samplePoisson(lamVar);
+      } else {
+        // 15%: tail-ekstra (untuk extreme event) tapi tetap di-clamp
+        const spread = 1.0 + normChaos*0.8;
+        const factor = Math.exp((Math.random()-0.5)*spread);
+        const lamVar = V20.clamp(lambdaBase*factor, 0.05, 7.0);
+        return V20.samplePoisson(lamVar);
+      }
+    }
 
     let homeWins=0, draws=0, awayWins=0, total=0, goalsTotal=0;
     const matrix=[];
@@ -1041,65 +1135,26 @@
       }
     }
 
-    const normChaos = V20.clamp((ctx.chaos-3)/4, 0, 1);
-    const normTempo = V20.clamp((ctx.tempo-3)/4, 0, 1);
-
-    const ratioH = lamH / (lamH+lamA);
-    const ratioA = lamA / (lamH+lamA);
-
-    const scenarios = [
-      {name:"base",      w:0.40,                       fH:1.00, fA:1.00},
-      {name:"highChaos", w:0.15 + 0.25*normChaos,      fH:1.15, fA:1.15},
-      {name:"lowChaos",  w:0.10 + 0.20*(1-normChaos),  fH:0.82, fA:0.82},
-      {name:"homeLead",  w:0.08 + 0.12*ratioH,         fH:0.95, fA:1.05},
-      {name:"awayLead",  w:0.08 + 0.12*ratioA,         fH:1.05, fA:0.95},
-      {name:"lockedLow", w:0.05 + 0.10*(1-normTempo),  fH:0.78, fA:0.78}
-    ];
-
-    let wsum=0;
-    scenarios.forEach(s=>{ wsum += s.w; });
-    scenarios.forEach(s=>{ s.p = s.w / wsum; });
-
-    const cumulative=[];
-    let acc=0;
-    for(let i=0;i<scenarios.length;i++){
-      acc += scenarios[i].p;
-      cumulative[i] = acc;
-    }
-
-    const scenarioCount = {};
-    scenarios.forEach(s=>scenarioCount[s.name]=0);
-
-    function pickScenario(){
-      const r = Math.random();
-      for(let i=0;i<cumulative.length;i++){
-        if (r <= cumulative[i]) return scenarios[i];
-      }
-      return scenarios[scenarios.length-1];
-    }
-
-    // hybrid sampler: kombinasi Poisson & overdispersed
-    function sampleHybrid(lambdaBase){
-      lambdaBase = Math.max(lambdaBase, 0.00001);
-      const r = Math.random();
-      if (r < 0.6){
-        // 60% murni Poisson
-        return V20.samplePoisson(lambdaBase);
-      } else {
-        // 40%: lambda digeser (overdispersed)
-        const spread = 0.9 + normChaos*0.8; // chaos tinggi → spread makin lebar
-        const factor = Math.exp((Math.random()-0.5)*spread);
-        const lamVar = V20.clamp(lambdaBase*factor, 0.05, 6.0);
-        return V20.samplePoisson(lamVar);
-      }
-    }
-
     for(let i=0;i<simCount;i++){
-      const sc = pickScenario();
+      const phase = pickPhase();
+      const sc    = pickScenario();
       scenarioCount[sc.name]++;
 
-      const lamH_sim = lamH * sc.fH;
-      const lamA_sim = lamA * sc.fA;
+      // λ fase
+      const lamH_phase = lamH_base * (phase.m || 1);
+      const lamA_phase = lamA_base * (phase.m || 1);
+
+      // modifier skenario
+      let fH = sc.fH, fA = sc.fA;
+
+      // jika phase "late" dan importance tinggi, dorong sedikit
+      if (phase.name==="late"){
+        fH *= (1 + normImp*0.05);
+        fA *= (1 + normImp*0.05);
+      }
+
+      const lamH_sim = lamH_phase * fH;
+      const lamA_sim = lamA_phase * fA;
 
       const h = sampleHybrid(lamH_sim);
       const a = sampleHybrid(lamA_sim);
@@ -1121,12 +1176,16 @@
     const pA = awayWins/total;
     const avgGoals = goalsTotal/total;
 
-    // OU pakai λ total efektif (rata-rata skenario)
-    let factorAvg = 0;
+    // λ total efektif: gabungan phase & scenario
+    let phaseFactorAvg = 0;
+    phaseList.forEach(p=>{ phaseFactorAvg += p.w*(p.m||1); });
+
+    let scenarioFactorAvg=0;
     scenarios.forEach(s=>{
-      factorAvg += s.p * ((s.fH + s.fA)/2);
+      scenarioFactorAvg += s.p * ((s.fH + s.fA)/2);
     });
-    const lamTotalEff = lamTotalBase * factorAvg;
+
+    const lamTotalEff = lamTotalBase * phaseFactorAvg * scenarioFactorAvg;
 
     const lines = [0.5,1.5,2.5,3.5];
     const ou = {};
@@ -1149,7 +1208,8 @@
       ou,
       scenarioStats:{
         scenarios:scenarios.map(s=>({name:s.name,p:s.p})),
-        count:scenarioCount
+        count:scenarioCount,
+        phaseDist:phaseList.map(p=>({name:p.name, w:p.w, m:p.m}))
       }
     };
   };
@@ -1160,7 +1220,7 @@
   =========================================== */
   V20.chaosModel = function(lambda, ctx){
     const chaosStrength = (ctx.chaos - 5)/5;
-    const factor = 1 + V20.clamp(chaosStrength*0.20, -0.18, 0.30);
+    const factor = 1 + V20.clamp(chaosStrength*0.22, -0.20, 0.32);
     return {
       lamH: V20.clamp(lambda.lamH*factor, 0.2, 4.2),
       lamA: V20.clamp(lambda.lamA*factor, 0.2, 4.2)
@@ -1169,7 +1229,7 @@
 
 
   /* ===========================================
-     4) ANTI-BIAS COMPRESSOR
+     4) ANTI-BIAS COMPRESSOR (sama, stabil)
   =========================================== */
   V20.compress1x2 = function(pH,pD,pA, level){
     function compress(x,c,f){ return c + (x-c)*f; }
@@ -1287,18 +1347,18 @@
       if      (i<=1) mult*=0.9;
       else if (i<=3) mult*=1.05;
       else if (i<=5) mult*=1.1;
-      else           mult*=1.15;
+      else           mult*=1.18;
 
-      if (i>=6) mult *= 1 + (imp-5)*0.015;
+      if (i>=6) mult *= 1 + (imp-5)*0.018;
 
       const raw = baseInt * mult;
       let level="sedang";
       if (raw<=0.4) level="rendah";
-      else if (raw>=1.0) level="tinggi";
+      else if (raw>=1.1) level="tinggi";
 
       segments.push({
         label: labels[i],
-        intensity: V20.clamp(raw,0.2,1.4),
+        intensity: V20.clamp(raw,0.2,1.6),
         level
       });
     }
@@ -1310,7 +1370,7 @@
      10) FUSI MODEL 1X2
   =========================================== */
   V20.fuseModels = function(det, mc, detChaos, biasLevel){
-    let wDet=0.24, wMC=0.52, wChaos=0.24;
+    let wDet=0.22, wMC=0.56, wChaos=0.22;
 
     let pH = det.pH*wDet + mc.pH*wMC + detChaos.pH*wChaos;
     let pD = det.pD*wDet + mc.pD*wMC + detChaos.pD*wChaos;
@@ -1367,13 +1427,15 @@
         if (mat[h][a]>maxCell) maxCell = mat[h][a];
       }
     }
-    const pMax = maxCell/total; // skor paling sering
+    const pMax = maxCell/total;
     let sdi = 100*(1-(pMax/0.45));
     return V20.clamp(sdi,0,100);
   };
 
 })();
-</script>
+  </script>
+
+    
 <!-- ============================= -->
 <!-- PART 8: GRAPHIC RENDERERS V20 -->
 <!-- ============================= -->
@@ -1660,7 +1722,7 @@
     const {lambda, det, detChaos, mc, fused, indices, hName, aName} = res;
 
     let text = "";
-    text += "=== MATCH PREDICTION REPORT (v2000000) ===\n\n";
+    text += "=== MATCH PREDICTION REPORT (v5000000) ===\n\n";
     text += `Match: ${hName} vs ${aName}\n\n`;
 
     text += "---- Expected Goals (λ) ----\n";
@@ -1722,7 +1784,7 @@
     else lead = "Pertandingan cenderung seimbang";
 
     let text = "";
-    text += "=== ANALYST VIEW (v2000000) ===\n\n";
+    text += "=== ANALYST VIEW (v5000000) ===\n\n";
 
     text += `Secara probabilitas akhir, ${lead} memiliki keunggulan relatif tipis dalam model v2000000.\n`;
     text += `Nilai λ menunjukkan pola serangan: Home ≈ ${lambda.lamH.toFixed(2)}, Away ≈ ${lambda.lamA.toFixed(2)}.\n`;
@@ -1772,7 +1834,7 @@
       pa > ph ? aName : "Seimbang";
 
     let text = "";
-    text += "=== MATCH STORYLINE v2000000 ===\n\n";
+    text += "=== MATCH STORYLINE v5000000 ===\n\n";
 
     // BABAK 1
     text += "⚽ BABAK PERTAMA:\n";
