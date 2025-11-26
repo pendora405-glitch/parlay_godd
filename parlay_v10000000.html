@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>Match Prediction Engine v5000000</title>
+<title>Match Prediction Engine v10000000</title>
 <style>
   body {
     font-family: system-ui, sans-serif;
@@ -66,7 +66,7 @@
 
 <body>
 
-<h1>Match Prediction Engine v5000000</h1>
+<h1>Match Prediction Engine v10000000</h1>
 
 <div class="section">
   <h2>Informasi Match</h2>
@@ -334,7 +334,7 @@
 
 <div class="section">
   <h2>Analisis</h2>
-  <button id="btn_analyze">ANALYZE v2000000</button>
+  <button id="btn_analyze">ANALYZE v10000000</button>
   <button id="btn_clear">CLEAR ALL</button>
 </div>
 
@@ -820,7 +820,7 @@
 
 
   /* ===========================================================
-     EXPECTED GOALS (λ) v2000000
+     EXPECTED GOALS (λ) v10000000
   =========================================================== */
 
   V20.buildLambda = function(homeTeam, awayTeam, ctx, h2h, tact){
@@ -967,8 +967,8 @@
 
 })();
 </script>
-  <!-- =================================================== -->
-<!-- PART 7: MULTI-PHASE HYBRID ENGINE v5000000 (V20)   -->
+<!-- =================================================== -->
+<!-- PART 7: MULTI-PHASE CALIBRATED ENGINE v10000000    -->
 <!-- =================================================== -->
 <script>
 (function(){
@@ -976,9 +976,10 @@
 
   /* ===========================================
      1) DETERMINISTIC POISSON 1X2 + OU
+     (sedikit diperluas max skor → 8)
   =========================================== */
   V20.detSim = function(lambda){
-    const maxG = 7;
+    const maxG = 8;
     const lamH = lambda.lamH;
     const lamA = lambda.lamA;
 
@@ -1022,13 +1023,14 @@
 
 
   /* ===========================================
-     2) MULTI-PHASE HYBRID MONTE CARLO v5000000
-     - Pakai phase (early/mid/late) dari lambda.phases
-     - Multi-skenario paralel
-     - Hybrid Poisson + overdispersed
+     2) MULTI-PHASE HYBRID MONTE CARLO v10000000
+        - Pakai phase (early/mid/late)
+        - 8 skenario
+        - Hybrid Poisson + overdispersed + tail
+        - OU dikalibrasi: gabungan MC + analitik
   =========================================== */
   V20.monteCarlo = function(lambda, ctx, simCount, scoreCap){
-    simCount = V20.clamp(simCount || 40000, 15000, 150000);
+    simCount = V20.clamp(simCount || 50000, 15000, 180000);
     scoreCap = V20.clamp(scoreCap || 5, 3, 8);
 
     const lamH_base = lambda.lamH;
@@ -1039,16 +1041,14 @@
       early:1, mid:1, late:1,
       wEarly:0.25,wMid:0.5,wLate:0.25
     };
-
-    // normalisasi bobot phase
     let wSum = phases.wEarly + phases.wMid + phases.wLate;
     if (!wSum || !isFinite(wSum)) wSum = 1;
+
     const phaseList = [
       {name:"early", w:phases.wEarly/wSum, m:phases.early||1},
       {name:"mid",   w:phases.wMid  /wSum, m:phases.mid  ||1},
       {name:"late",  w:phases.wLate /wSum, m:phases.late ||1}
     ];
-    // cumulative untuk pemilihan phase
     let accP=0;
     phaseList.forEach(p=>{
       accP += p.w;
@@ -1063,23 +1063,23 @@
       return phaseList[phaseList.length-1];
     }
 
-    // context normal
+    // Normalisasi konteks
     const normChaos = V20.clamp((ctx.chaos-3)/4, 0, 1);
     const normTempo = V20.clamp((ctx.tempo-3)/4, 0, 1);
     const normImp   = V20.clamp((ctx.importance-3)/4, 0, 1);
     const ratioH    = lamH_base / (lamH_base+lamA_base);
     const ratioA    = lamA_base / (lamH_base+lamA_base);
 
-    // skenario paralel
+    // skenario paralel (disesuaikan untuk v10.000.000)
     const scenarios = [
-      {name:"base",        w:0.35,                    fH:1.00, fA:1.00},
-      {name:"highChaos",   w:0.12 + 0.22*normChaos,   fH:1.18, fA:1.18},
-      {name:"lowChaos",    w:0.10 + 0.20*(1-normChaos), fH:0.80, fA:0.80},
-      {name:"homeFront",   w:0.08 + 0.12*ratioH,      fH:1.08, fA:0.96},
-      {name:"awayFront",   w:0.08 + 0.12*ratioA,      fH:0.96, fA:1.08},
-      {name:"parkedBus",   w:0.05 + 0.10*(1-normTempo), fH:0.70, fA:0.70},
-      {name:"latePush",    w:0.05 + 0.10*normImp,     fH:1.03, fA:1.03},
-      {name:"wideOpen",    w:0.05 + 0.10*(normTempo*normChaos), fH:1.22, fA:1.22}
+      {name:"base",        w:0.30,                            fH:1.00, fA:1.00},
+      {name:"highChaos",   w:0.10 + 0.22*normChaos,           fH:1.18, fA:1.18},
+      {name:"lowChaos",    w:0.09 + 0.20*(1-normChaos),       fH:0.80, fA:0.80},
+      {name:"homeFront",   w:0.07 + 0.12*ratioH,              fH:1.08, fA:0.96},
+      {name:"awayFront",   w:0.07 + 0.12*ratioA,              fH:0.96, fA:1.08},
+      {name:"parkedBus",   w:0.05 + 0.10*(1-normTempo),       fH:0.70, fA:0.70},
+      {name:"latePush",    w:0.05 + 0.10*normImp,             fH:1.03, fA:1.03},
+      {name:"wideOpen",    w:0.04 + 0.10*(normTempo*normChaos), fH:1.22, fA:1.22}
     ];
 
     let wS=0;
@@ -1104,7 +1104,7 @@
     const scenarioCount = {};
     scenarios.forEach(s=>scenarioCount[s.name]=0);
 
-    // sampler hybrid dengan tail sedikit lebih berat
+    // sampler hybrid v10.000.000 (tiga mode)
     function sampleHybrid(lambdaBase){
       lambdaBase = Math.max(lambdaBase, 0.00001);
       const r = Math.random();
@@ -1118,7 +1118,7 @@
         const lamVar = V20.clamp(lambdaBase*factor, 0.05, 6.0);
         return V20.samplePoisson(lamVar);
       } else {
-        // 15%: tail-ekstra (untuk extreme event) tapi tetap di-clamp
+        // 15%: tail-ekstra (extreme event) dengan clamp ketat
         const spread = 1.0 + normChaos*0.8;
         const factor = Math.exp((Math.random()-0.5)*spread);
         const lamVar = V20.clamp(lambdaBase*factor, 0.05, 7.0);
@@ -1140,14 +1140,12 @@
       const sc    = pickScenario();
       scenarioCount[sc.name]++;
 
-      // λ fase
       const lamH_phase = lamH_base * (phase.m || 1);
       const lamA_phase = lamA_base * (phase.m || 1);
 
-      // modifier skenario
       let fH = sc.fH, fA = sc.fA;
 
-      // jika phase "late" dan importance tinggi, dorong sedikit
+      // Late + importance tinggi → sedikit boost
       if (phase.name==="late"){
         fH *= (1 + normImp*0.05);
         fA *= (1 + normImp*0.05);
@@ -1176,7 +1174,7 @@
     const pA = awayWins/total;
     const avgGoals = goalsTotal/total;
 
-    // λ total efektif: gabungan phase & scenario
+    // λ total efektif (phase + scenario)
     let phaseFactorAvg = 0;
     phaseList.forEach(p=>{ phaseFactorAvg += p.w*(p.m||1); });
 
@@ -1187,8 +1185,12 @@
 
     const lamTotalEff = lamTotalBase * phaseFactorAvg * scenarioFactorAvg;
 
+    // OU: kombinasi analitik + hasil MC matrix
     const lines = [0.5,1.5,2.5,3.5];
     const ou = {};
+
+    // OU analitik (Poisson total goals)
+    const ouAnalytic = {};
     lines.forEach(line=>{
       let under = 0;
       const cut = Math.floor(line);
@@ -1196,7 +1198,35 @@
         under += V20.poissonPMF(lamTotalEff,k);
       }
       const over = 1-under;
-      ou[line.toString()] = {over,under};
+      ouAnalytic[line.toString()] = {over,under};
+    });
+
+    // OU dari matrix MC
+    const ouMC = {};
+    lines.forEach(line=>{
+      const cut = Math.floor(line);
+      let under = 0, over=0;
+      for(let h=0;h<=scoreCap;h++){
+        for(let a=0;a<=scoreCap;a++){
+          const sum = h+a;
+          const cnt = matrix[h][a];
+          if (sum <= cut) under += cnt;
+          else            over  += cnt;
+        }
+      }
+      const u = total>0 ? under/total : 0;
+      const o = total>0 ? over /total : 0;
+      ouMC[line.toString()] = {over:o,under:u};
+    });
+
+    // gabungan analitik + MC
+    lines.forEach(line=>{
+      const k = line.toString();
+      const a = ouAnalytic[k];
+      const m = ouMC[k];
+      const over  = (a.over*0.5  + m.over*0.5);
+      const under = (a.under*0.5 + m.under*0.5);
+      ou[k] = {over,under};
     });
 
     return {
@@ -1368,9 +1398,24 @@
 
   /* ===========================================
      10) FUSI MODEL 1X2
+         - v10.000.000: bobot dinamis sesuai volatilitas
   =========================================== */
   V20.fuseModels = function(det, mc, detChaos, biasLevel){
-    let wDet=0.22, wMC=0.56, wChaos=0.22;
+    // hitung volatilitas antara det & chaos view
+    const diffH = Math.abs(det.pH - detChaos.pH);
+    const diffD = Math.abs(det.pD - detChaos.pD);
+    const diffA = Math.abs(det.pA - detChaos.pA);
+    const vol   = (diffH + diffD + diffA) / 3;  // 0..~0.3
+
+    // dasar
+    let wDetBase=0.22, wMCBase=0.56, wChaosBase=0.22;
+
+    // jika volatilitas rendah → lebih percaya deterministik
+    // jika volatilitas tinggi → lebih percaya chaos + MC
+    const volNorm = V20.clamp(vol/0.20,0,1);
+    const wDet   = wDetBase   + (0.06*(1-volNorm));
+    const wChaos = wChaosBase + (0.10*volNorm);
+    const wMC    = 1 - (wDet + wChaos);
 
     let pH = det.pH*wDet + mc.pH*wMC + detChaos.pH*wChaos;
     let pD = det.pD*wDet + mc.pD*wMC + detChaos.pD*wChaos;
@@ -1433,8 +1478,7 @@
   };
 
 })();
-  </script>
-
+</script>
     
 <!-- ============================= -->
 <!-- PART 8: GRAPHIC RENDERERS V20 -->
@@ -1722,7 +1766,7 @@
     const {lambda, det, detChaos, mc, fused, indices, hName, aName} = res;
 
     let text = "";
-    text += "=== MATCH PREDICTION REPORT (v5000000) ===\n\n";
+    text += "=== MATCH PREDICTION REPORT (v10000000) ===\n\n";
     text += `Match: ${hName} vs ${aName}\n\n`;
 
     text += "---- Expected Goals (λ) ----\n";
@@ -1784,7 +1828,7 @@
     else lead = "Pertandingan cenderung seimbang";
 
     let text = "";
-    text += "=== ANALYST VIEW (v5000000) ===\n\n";
+    text += "=== ANALYST VIEW (v10000000) ===\n\n";
 
     text += `Secara probabilitas akhir, ${lead} memiliki keunggulan relatif tipis dalam model v2000000.\n`;
     text += `Nilai λ menunjukkan pola serangan: Home ≈ ${lambda.lamH.toFixed(2)}, Away ≈ ${lambda.lamA.toFixed(2)}.\n`;
@@ -1834,7 +1878,7 @@
       pa > ph ? aName : "Seimbang";
 
     let text = "";
-    text += "=== MATCH STORYLINE v5000000 ===\n\n";
+    text += "=== MATCH STORYLINE v10000000 ===\n\n";
 
     // BABAK 1
     text += "⚽ BABAK PERTAMA:\n";
@@ -2045,8 +2089,8 @@
   function runAnalyze(){
     const panel = document.getElementById("result_panel");
     const narr  = document.getElementById("analyst_panel");
-    if (panel) panel.textContent = "Memproses v2000000...";
-    if (narr)  narr.textContent  = "Menyusun narasi v2000000...";
+    if (panel) panel.textContent = "Memproses v10000000...";
+    if (narr)  narr.textContent  = "Menyusun narasi v10000000...";
 
     const inp = collectInputs();
 
