@@ -203,7 +203,33 @@
 
   <label>PPDA Away</label>
   <input id="adv_ppda_away" type="number" step="0.1" placeholder="mis: 10.5">
+<label>Gaya Pressing Home (jika tidak ada PPDA asli)</label>
+  <select id="press_style_home">
+    <option value="">-- Pilih gaya pressing --</option>
+    <option value="high">High Press (mengejar tinggi)</option>
+    <option value="mid_high">Mid–High Press</option>
+    <option value="mid">Mid Block (seimbang)</option>
+    <option value="mid_low">Mid–Low Block</option>
+    <option value="low">Low Block / sangat pasif</option>
+  </select>
 
+  <label>Gaya Pressing Away (jika tidak ada PPDA asli)</label>
+  <select id="press_style_away">
+    <option value="">-- Pilih gaya pressing --</option>
+    <option value="high">High Press (mengejar tinggi)</option>
+    <option value="mid_high">Mid–High Press</option>
+    <option value="mid">Mid Block (seimbang)</option>
+    <option value="mid_low">Mid–Low Block</option>
+    <option value="low">Low Block / sangat pasif</option>
+  </select>
+
+  <button id="btn_auto_ppda">AUTO-ESTIMATE PPDA</button>
+  <small>
+    Gunakan jika situs tidak menyediakan angka PPDA.  
+    Estimasi dibuat dari gaya pressing + xGA + error defensif.  
+    Hasilnya otomatis mengisi PPDA Home/Away di atas.
+  </small>
+  
   <label>Error Defensif Home per laga (perkiraan)</label>
   <input id="adv_err_home" type="number" step="0.1" placeholder="mis: 0.8">
 
@@ -1174,7 +1200,72 @@ V20.autoCalcRequired = function(){
 
   alert("Auto-calc selesai. Input utama sudah terisi.");
 };
+// -------------------------------------------------------------
+// AUTO-ESTIMATE PPDA dari gaya pressing + xGA + error
+// -------------------------------------------------------------
+V20.autoEstimatePPDA = function(){
+  const outEl = document.getElementById('output');
 
+  const styleH = (document.getElementById('press_style_home') || {}).value || "";
+  const styleA = (document.getElementById('press_style_away') || {}).value || "";
+
+  const xgaH  = V20.num(document.getElementById('adv_xga_home').value, NaN);
+  const xgaA  = V20.num(document.getElementById('adv_xga_away').value, NaN);
+  const errH  = V20.num(document.getElementById('adv_err_home').value, NaN);
+  const errA  = V20.num(document.getElementById('adv_err_away').value, NaN);
+
+  function basePPDA(style){
+    switch(style){
+      case "high":     return 6.5;   // high press
+      case "mid_high": return 9.0;   // mid–high
+      case "mid":      return 12.0;  // mid block
+      case "mid_low":  return 15.0;  // mid–low
+      case "low":      return 18.0;  // low block
+      default:         return 12.0;  // netral
+    }
+  }
+
+  function refine(ppda, xga, err){
+    let v = ppda;
+
+    // xGA kecil → tim sulit ditembus → press cenderung lebih agresif / rapi
+    if (isFinite(xga)){
+      if (xga < 1.0)      v -= 0.8;
+      else if (xga > 1.6) v += 0.8;
+    }
+
+    // error tinggi → press sering telat / salah → PPDA cenderung naik
+    if (isFinite(err)){
+      if (err > 1.0) v += 0.8;
+      else if (err < 0.5) v -= 0.4;
+    }
+
+    return V20.clamp(v, 4.0, 22.0);
+  }
+
+  let ppdaH = basePPDA(styleH || "mid");
+  let ppdaA = basePPDA(styleA || "mid");
+
+  ppdaH = refine(ppdaH, xgaH, errH);
+  ppdaA = refine(ppdaA, xgaA, errA);
+
+  const elH = document.getElementById('adv_ppda_home');
+  const elA = document.getElementById('adv_ppda_away');
+
+  if (elH) elH.value = ppdaH.toFixed(2);
+  if (elA) elA.value = ppdaA.toFixed(2);
+
+  if (outEl){
+    let log = "[AUTO-ESTIMATE PPDA]\n";
+    log += `PPDA Home (est) : ${ppdaH.toFixed(2)}\n`;
+    log += `PPDA Away (est) : ${ppdaA.toFixed(2)}\n`;
+    log += `(Berdasarkan gaya pressing + xGA + error)\n\n`;
+    outEl.value = log + (outEl.value || "");
+  }
+
+  alert("Estimasi PPDA selesai. PPDA Home/Away sudah terisi.");
+};
+    
 
 // -------------------------------------------------------------
 // AUTO-FILL TEMPO / CHAOS / IMPORTANCE
@@ -1605,6 +1696,18 @@ window.addEventListener('DOMContentLoaded', function(){
       } catch(e){
         console.error(e);
         alert("Terjadi error saat AUTO-FILL Tempo/Chaos/Importance. Cek input & console.");
+      }
+    });
+  }
+
+  const btnAutoPPDA = document.getElementById('btn_auto_ppda');
+  if (btnAutoPPDA){
+    btnAutoPPDA.addEventListener('click', function(){
+      try {
+        V20.autoEstimatePPDA();
+      } catch(e){
+        console.error(e);
+        alert("Terjadi error saat AUTO-ESTIMATE PPDA. Cek input & console.");
       }
     });
   }
