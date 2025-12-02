@@ -1,506 +1,57 @@
 <!DOCTYPE html>
-<html lang="id">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <title>Kalkulator PPDA Football</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    :root {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      line-height: 1.4;
-    }
-
-    body {
-      margin: 0;
-      padding: 0;
-      background: #0f172a;
-      color: #e5e7eb;
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-      min-height: 100vh;
-    }
-
-    .app {
-      max-width: 480px;
-      width: 100%;
-      margin: 24px;
-      padding: 24px 20px 20px;
-      background: radial-gradient(circle at top left, #1e293b, #020617);
-      border-radius: 18px;
-      box-shadow: 0 20px 40px rgba(15, 23, 42, 0.8);
-      border: 1px solid rgba(148, 163, 184, 0.25);
-    }
-
-    h1 {
-      margin: 0 0 4px;
-      font-size: 1.5rem;
-      color: #f9fafb;
-      text-align: center;
-    }
-
-    .subtitle {
-      margin: 0 0 20px;
-      font-size: 0.85rem;
-      text-align: center;
-      color: #9ca3af;
-    }
-
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 0.7rem;
-      padding: 4px 8px;
-      border-radius: 999px;
-      background: rgba(148, 163, 184, 0.18);
-      color: #e5e7eb;
-      margin: 0 auto 18px;
-      border: 1px solid rgba(148, 163, 184, 0.4);
-    }
-
-    .badge-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 999px;
-      background: #22c55e;
-      box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.25);
-    }
-
-    .section-title {
-      font-size: 0.9rem;
-      font-weight: 600;
-      margin-bottom: 6px;
-      color: #e5e7eb;
-    }
-
-    .section-desc {
-      font-size: 0.78rem;
-      color: #9ca3af;
-      margin-bottom: 14px;
-    }
-
-    .field {
-      margin-bottom: 14px;
-    }
-
-    label {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.8rem;
-      margin-bottom: 4px;
-      color: #e5e7eb;
-    }
-
-    label span.helper {
-      font-size: 0.72rem;
-      color: #94a3b8;
-    }
-
-    input[type="number"] {
-      width: 100%;
-      padding: 9px 11px;
-      border-radius: 10px;
-      border: 1px solid rgba(148, 163, 184, 0.5);
-      background: rgba(15, 23, 42, 0.9);
-      color: #e5e7eb;
-      font-size: 0.85rem;
-      outline: none;
-      box-sizing: border-box;
-    }
-
-    input[type="number"]:focus {
-      border-color: #38bdf8;
-      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.4);
-    }
-
-    .inline-fields {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-
-    .toggle-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin: 10px 0 6px;
-      font-size: 0.78rem;
-    }
-
-    .toggle-row small {
-      color: #9ca3af;
-    }
-
-    .toggle {
-      position: relative;
-      width: 40px;
-      height: 20px;
-      border-radius: 999px;
-      background: #1e293b;
-      border: 1px solid #4b5563;
-      cursor: pointer;
-      transition: background 0.15s ease, border-color 0.15s ease;
-    }
-
-    .toggle-circle {
-      position: absolute;
-      top: 1px;
-      left: 1px;
-      width: 16px;
-      height: 16px;
-      border-radius: 999px;
-      background: #e5e7eb;
-      transition: transform 0.18s ease;
-    }
-
-    .toggle.on {
-      background: #22c55e;
-      border-color: #22c55e;
-    }
-
-    .toggle.on .toggle-circle {
-      transform: translateX(18px);
-    }
-
-    button {
-      width: 100%;
-      margin-top: 10px;
-      padding: 10px 12px;
-      border-radius: 999px;
-      border: none;
-      font-size: 0.9rem;
-      font-weight: 600;
-      cursor: pointer;
-      background: linear-gradient(135deg, #38bdf8, #22c55e);
-      color: #020617;
-      box-shadow: 0 12px 25px rgba(56, 189, 248, 0.35);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-    }
-
-    button span.icon {
-      font-size: 1rem;
-    }
-
-    button:active {
-      transform: translateY(1px);
-      box-shadow: 0 6px 14px rgba(56, 189, 248, 0.35);
-    }
-
-    .result-card {
-      margin-top: 16px;
-      padding: 12px 12px 10px;
-      border-radius: 14px;
-      background: rgba(15, 23, 42, 0.9);
-      border: 1px solid rgba(148, 163, 184, 0.4);
-      display: grid;
-      grid-template-columns: 1.2fr 1fr;
-      gap: 10px;
-      align-items: center;
-    }
-
-    .result-main {
-      font-size: 0.82rem;
-    }
-
-    .result-label {
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      font-size: 0.7rem;
-      color: #9ca3af;
-    }
-
-    .result-value {
-      font-size: 1.4rem;
-      font-weight: 700;
-      margin: 2px 0 1px;
-      color: #f9fafb;
-    }
-
-    .result-tag {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 0.7rem;
-      padding: 3px 8px;
-      border-radius: 999px;
-      border: 1px solid rgba(148, 163, 184, 0.4);
-      color: #e5e7eb;
-    }
-
-    .pill {
-      font-size: 0.7rem;
-      padding: 2px 8px;
-      border-radius: 999px;
-      border: 1px solid rgba(148, 163, 184, 0.4);
-      display: inline-block;
-      margin-top: 4px;
-      color: #cbd5f5;
-    }
-
-    .hint {
-      margin-top: 10px;
-      font-size: 0.72rem;
-      color: #9ca3af;
-    }
-
-    .hint strong {
-      color: #e5e7eb;
-    }
-
-    .hint-list {
-      margin: 6px 0 0;
-      padding-left: 18px;
-      font-size: 0.7rem;
-      color: #9ca3af;
-    }
-
-    .badge-legend {
-      margin-top: 8px;
-      font-size: 0.7rem;
-      color: #94a3b8;
-    }
-
-    .badge-legend span {
-      display: inline-block;
-      margin-right: 8px;
-    }
-
-    .dot {
-      display: inline-block;
-      width: 7px;
-      height: 7px;
-      border-radius: 999px;
-      margin-right: 4px;
-    }
-
-    .dot-high {
-      background: #22c55e;
-    }
-    .dot-med {
-      background: #eab308;
-    }
-    .dot-low {
-      background: #f97316;
-    }
-
-    .error {
-      margin-top: 8px;
-      font-size: 0.75rem;
-      color: #fecaca;
-      display: none;
-    }
-
-    @media (max-width: 480px) {
-      .app {
-        margin: 16px;
-        padding: 20px 16px 16px;
-      }
-      .result-card {
-        grid-template-columns: 1fr;
-      }
-    }
-  </style>
+<title>PPDA Rata-Rata Musim</title>
+<style>
+    body { font-family: Arial; padding: 20px; background: #111; color: #eee; }
+    .box { background: #222; padding: 15px; border-radius: 10px; width: 350px; }
+    input { width: 100%; padding: 8px; margin: 5px 0; border-radius: 6px; border: none; }
+    button { width: 100%; padding: 10px; background: #0b84ff; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; }
+    button:hover { background: #056dd8; }
+    .result { margin-top: 10px; font-size: 18px; font-weight: bold; color: #0bff8f; }
+</style>
 </head>
 <body>
-  <div class="app">
-    <div style="text-align:center;">
-      <h1>Kalkulator PPDA</h1>
-      <p class="subtitle">Passes Allowed Per Defensive Action</p>
-      <div class="badge">
-        <div class="badge-dot"></div>
-        <span>Semakin <b>rendah</b> → pressing makin agresif</span>
-      </div>
-    </div>
 
-    <div>
-      <div class="section-title">Input Data Pertandingan</div>
-      <p class="section-desc">
-        Masukkan jumlah <b>operan lawan</b> di area pressing dan jumlah <b>aksi bertahan</b> tim Anda
-        (tekel + intersep + tekanan) di area yang sama.
-      </p>
+<h2>PPDA Rata-Rata Musim</h2>
 
-      <div class="field">
-        <label for="passes">
-          Operan lawan di area pressing
-          <span class="helper">contoh: 120</span>
-        </label>
-        <input type="number" id="passes" min="0" step="1" placeholder="Masukkan jumlah operan lawan" />
-      </div>
+<div class="box">
+    <label>Total Operan Lawan (Att)</label>
+    <input id="att" type="number" placeholder="Contoh: 21430">
 
-      <div class="inline-fields">
-        <div class="field">
-          <label for="tackles">
-            Tekel sukses
-            <span class="helper">opsional</span>
-          </label>
-          <input type="number" id="tackles" min="0" step="1" placeholder="0" />
-        </div>
-        <div class="field">
-          <label for="interceptions">
-            Intersep
-            <span class="helper">opsional</span>
-          </label>
-          <input type="number" id="interceptions" min="0" step="1" placeholder="0" />
-        </div>
-      </div>
+    <label>Total Tackle (Tkl)</label>
+    <input id="tkl" type="number" placeholder="Contoh: 1040">
 
-      <div class="inline-fields">
-        <div class="field">
-          <label for="pressures">
-            Tekanan / pressures
-            <span class="helper">opsional</span>
-          </label>
-          <input type="number" id="pressures" min="0" step="1" placeholder="0" />
-        </div>
-        <div class="field">
-          <label for="defActions">
-            Total aksi bertahan
-            <span class="helper">manual (jika mau)</span>
-          </label>
-          <input type="number" id="defActions" min="0" step="1" placeholder="otomatis dari tekel + intersep + tekanan" />
-        </div>
-      </div>
+    <label>Total Interception (Int)</label>
+    <input id="intc" type="number" placeholder="Contoh: 380">
 
-      <div class="toggle-row">
-        <div>
-          <strong>Hitung aksi bertahan otomatis</strong><br />
-          <small>Tekel + intersep + tekanan</small>
-        </div>
-        <div id="autoToggle" class="toggle on">
-          <div class="toggle-circle"></div>
-        </div>
-      </div>
+    <label>Total Pressures (Prs)</label>
+    <input id="prs" type="number" placeholder="Contoh: 2260">
 
-      <button id="calcBtn">
-        <span class="icon">⚽</span>
-        Hitung PPDA
-      </button>
+    <button onclick="hitungPPDA()">Hitung PPDA Musim</button>
 
-      <div id="errorBox" class="error"></div>
+    <div class="result" id="hasil"></div>
+</div>
 
-      <div class="result-card" id="resultCard" style="display:none;">
-        <div class="result-main">
-          <div class="result-label">Nilai PPDA</div>
-          <div class="result-value" id="ppdaValue">0.00</div>
-          <div class="pill" id="ppdaCategory">–</div>
-        </div>
-        <div>
-          <div class="result-tag">
-            <span id="tagEmoji">📊</span>
-            <span id="tagText">Menunggu perhitungan…</span>
-          </div>
-          <div class="badge-legend">
-            <span><span class="dot dot-high"></span><b>3–7</b> pressing tinggi</span><br/>
-            <span><span class="dot dot-med"></span><b>8–12</b> medium</span><br/>
-            <span><span class="dot dot-low"></span><b>13+</b> pressing rendah</span>
-          </div>
-        </div>
-      </div>
+<script>
+function hitungPPDA() {
+    let att = parseFloat(document.getElementById("att").value);
+    let tkl = parseFloat(document.getElementById("tkl").value);
+    let intc = parseFloat(document.getElementById("intc").value);
+    let prs = parseFloat(document.getElementById("prs").value);
 
-      <div class="hint">
-        <strong>Catatan:</strong>
-        <ul class="hint-list">
-          <li>PPDA = operan lawan ÷ aksi bertahan tim Anda di area pressing.</li>
-          <li>Nilai lebih <b>kecil</b> = tim menekan lawan lebih agresif.</li>
-          <li>Sesuaikan area pressing sesuai model analisis Anda (misalnya 60% area terdepan).</li>
-        </ul>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    const autoToggle = document.getElementById("autoToggle");
-    const passesInput = document.getElementById("passes");
-    const tacklesInput = document.getElementById("tackles");
-    const interInput = document.getElementById("interceptions");
-    const pressuresInput = document.getElementById("pressures");
-    const defActionsInput = document.getElementById("defActions");
-    const calcBtn = document.getElementById("calcBtn");
-    const resultCard = document.getElementById("resultCard");
-    const ppdaValue = document.getElementById("ppdaValue");
-    const ppdaCategory = document.getElementById("ppdaCategory");
-    const tagText = document.getElementById("tagText");
-    const tagEmoji = document.getElementById("tagEmoji");
-    const errorBox = document.getElementById("errorBox");
-
-    let autoMode = true;
-
-    // Toggle otomatis/manual
-    autoToggle.addEventListener("click", () => {
-      autoMode = !autoMode;
-      autoToggle.classList.toggle("on", autoMode);
-
-      if (autoMode) {
-        defActionsInput.placeholder = "otomatis dari tekel + intersep + tekanan";
-        defActionsInput.readOnly = true;
-        defActionsInput.style.opacity = 0.6;
-      } else {
-        defActionsInput.placeholder = "masukkan total aksi bertahan";
-        defActionsInput.readOnly = false;
-        defActionsInput.style.opacity = 1;
-      }
-    });
-
-    // Set awal input total aksi bertahan (read-only)
-    defActionsInput.readOnly = true;
-    defActionsInput.style.opacity = 0.6;
-
-    function parseNumber(el) {
-      const val = parseFloat(el.value);
-      return isNaN(val) ? 0 : val;
+    if (isNaN(att) || isNaN(tkl) || isNaN(intc) || isNaN(prs)) {
+        document.getElementById("hasil").innerHTML = "❌ Masukkan semua data dengan benar.";
+        return;
     }
 
-    function classifyPPDA(ppda) {
-      if (ppda <= 0) return { label: "Tidak valid", text: "Pastikan input sudah benar.", emoji: "⚠️" };
-      if (ppda < 7) return { label: "Pressing tinggi", text: "Tim menekan lawan dengan intensitas tinggi.", emoji: "🔥" };
-      if (ppda <= 12) return { label: "Pressing medium", text: "Intensitas pressing sedang / seimbang.", emoji: "📊" };
-      return { label: "Pressing rendah", text: "Tim cenderung lebih pasif dalam menekan lawan.", emoji: "🌙" };
-    }
+    let def = tkl + intc + prs; 
+    let ppda = att / def;
 
-    calcBtn.addEventListener("click", () => {
-      errorBox.style.display = "none";
-      const passes = parseNumber(passesInput);
-      let defActions;
+    document.getElementById("hasil").innerHTML =
+        "PPDA Rata Musim: <br><span style='color:#0bff8f'>" + ppda.toFixed(2) + "</span>";
+}
+</script>
 
-      if (autoMode) {
-        const tackles = parseNumber(tacklesInput);
-        const inter = parseNumber(interInput);
-        const pressures = parseNumber(pressuresInput);
-        defActions = tackles + inter + pressures;
-        defActionsInput.value = defActions > 0 ? defActions : "";
-      } else {
-        defActions = parseNumber(defActionsInput);
-      }
-
-      // Validasi
-      if (passes <= 0) {
-        errorBox.textContent = "Operan lawan harus lebih dari 0.";
-        errorBox.style.display = "block";
-        resultCard.style.display = "none";
-        return;
-      }
-
-      if (defActions <= 0) {
-        errorBox.textContent = "Total aksi bertahan harus lebih dari 0. Isi tekel/intersep/tekanan atau total aksi.";
-        errorBox.style.display = "block";
-        resultCard.style.display = "none";
-        return;
-      }
-
-      const ppda = passes / defActions;
-      const ppdaRounded = ppda.toFixed(2);
-      const category = classifyPPDA(ppda);
-
-      ppdaValue.textContent = ppdaRounded;
-      ppdaCategory.textContent = category.label;
-      tagText.textContent = category.text;
-      tagEmoji.textContent = category.emoji;
-      resultCard.style.display = "grid";
-    });
-  </script>
 </body>
 </html>
