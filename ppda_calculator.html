@@ -1,55 +1,51 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>PPDA Rata-Rata Musim</title>
+<title>PPDA Extended (Tkl + Int + Blocks)</title>
 <style>
-    body { font-family: Arial; padding: 20px; background: #111; color: #eee; }
-    .box { background: #222; padding: 15px; border-radius: 10px; width: 350px; }
-    input { width: 100%; padding: 8px; margin: 5px 0; border-radius: 6px; border: none; }
-    button { width: 100%; padding: 10px; background: #0b84ff; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; }
-    button:hover { background: #056dd8; }
-    .result { margin-top: 10px; font-size: 18px; font-weight: bold; color: #0bff8f; }
+body { font-family: Arial; background:#111; color:#fff; padding:20px; }
+input { width:100%; padding:8px; margin:6px 0; border-radius:5px; border:none; }
+button { width:100%; padding:10px; background:#0d6efd; border:none; border-radius:8px; color:#fff; font-size:16px; }
+.result { margin-top:12px; font-size:22px; color:#00ffa6; font-weight:bold; }
 </style>
 </head>
 <body>
 
-<h2>PPDA Rata-Rata Musim</h2>
+<h2>PPDA Extended (Tkl + Int + Blocks)</h2>
 
-<div class="box">
-    <label>Total Operan Lawan (Att)</label>
-    <input id="att" type="number" placeholder="Contoh: 21430">
+<label>Total Operan Lawan (Att)</label>
+<input id="att" type="number" placeholder="Contoh: 21430">
 
-    <label>Total Tackle (Tkl)</label>
-    <input id="tkl" type="number" placeholder="Contoh: 1040">
+<label>Total Tekel (Tkl)</label>
+<input id="tkl" type="number" placeholder="Contoh: 1040">
 
-    <label>Total Interception (Int)</label>
-    <input id="intc" type="number" placeholder="Contoh: 380">
+<label>Total Intersep (Int)</label>
+<input id="intc" type="number" placeholder="Contoh: 380">
 
-    <label>Total Pressures (Prs)</label>
-    <input id="prs" type="number" placeholder="Contoh: 2260">
+<label>Total Blocks</label>
+<input id="blk" type="number" placeholder="Contoh: 550">
 
-    <button onclick="hitungPPDA()">Hitung PPDA Musim</button>
+<button onclick="ppdaExt()">Hitung PPDA Extended</button>
 
-    <div class="result" id="hasil"></div>
-</div>
+<div class="result" id="hasil"></div>
 
 <script>
-function hitungPPDA() {
+function ppdaExt(){
     let att = parseFloat(document.getElementById("att").value);
     let tkl = parseFloat(document.getElementById("tkl").value);
     let intc = parseFloat(document.getElementById("intc").value);
-    let prs = parseFloat(document.getElementById("prs").value);
+    let blk = parseFloat(document.getElementById("blk").value);
 
-    if (isNaN(att) || isNaN(tkl) || isNaN(intc) || isNaN(prs)) {
-        document.getElementById("hasil").innerHTML = "❌ Masukkan semua data dengan benar.";
+    if(isNaN(att) || isNaN(tkl) || isNaN(intc) || isNaN(blk)){
+        document.getElementById("hasil").innerHTML = "❌ Masukkan semua angka dengan benar.";
         return;
     }
 
-    let def = tkl + intc + prs; 
-    let ppda = att / def;
+    let defext = tkl + intc + blk;
+    let ppda = att / defext;
 
     document.getElementById("hasil").innerHTML =
-        "PPDA Rata Musim: <br><span style='color:#0bff8f'>" + ppda.toFixed(2) + "</span>";
+        "PPDA Extended Musim: " + ppda.toFixed(2);
 }
 </script>
 
