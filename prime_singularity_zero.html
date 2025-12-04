@@ -269,6 +269,10 @@
   <button onclick="analysisSummary()">MATCH SUMMARY</button>
   <button onclick="FATE_runFateCollapse()">FATE COLLAPSE ENGINE</button>
 <button onclick="GUN_runGrandUnified()">GRAND UNIFIED ENGINE</button>
+  <button onclick="QRE_runQuantumReality()">QUANTUM REALITY ENGINE</button>
+<button onclick="MNE_runMetaNarrative()">META NARRATIVE ENGINE</button>
+<button onclick="AIF_runFormationAI()">AI FORMATION ADAPTATION</button>
+<button onclick="UIE_runUnitedIntelligence()">UNITED INTELLIGENCE ENGINE</button>
   <small>
     Gunakan jika situs tidak menyediakan angka PPDA.  
     Estimasi dibuat dari gaya pressing + xGA + error defensif.  
@@ -3339,6 +3343,225 @@ function autoPhasePredictor(){
         <hr><h3>MATCH PHASE PREDICTOR</h3>
         Phase: ${phase}<br>
     `;
+}
+  </script>
+  <script>
+// ===================================================
+// HELPER KHUSUS ENGINE BARU (AMAN, TIDAK TUMPANG TINDIH)
+// ===================================================
+function UIE_safeRead(id, fallback = 0){
+    const el = document.getElementById(id);
+    if(!el) return fallback;
+    const v = parseFloat(el.value);
+    if(isNaN(v) || !isFinite(v)) return fallback;
+    return v;
+}
+
+function UIE_safeOut(html){
+    const out = document.getElementById("output");
+    if(out) out.innerHTML += html;
+}
+
+// ===================================================
+// 1) QUANTUM REALITY ENGINE (QRE_)
+//    - Membentuk 3 "realitas": Conservative, Base, Wild
+// ===================================================
+function QRE_runQuantumReality(){
+
+    const lamH  = UIE_safeRead("lamH", 1.0);
+    const lamA  = UIE_safeRead("lamA", 1.0);
+    const tempo = UIE_safeRead("tempo_input", 5);
+    const chaos = UIE_safeRead("chaos_input", 5);
+    const imp   = UIE_safeRead("importance_input", 5);
+
+    // Realitas 1: Conservative (defensif, final stage match)
+    const consFactor = 1 - Math.min(0.25, (imp * 0.02) + (chaos * 0.01));
+    const consH = lamH * consFactor;
+    const consA = lamA * consFactor;
+
+    // Realitas 2: Base (normal, sesuai model utama)
+    const baseH = lamH;
+    const baseA = lamA;
+
+    // Realitas 3: Wild (over-shoot, chaos tinggi)
+    const wildFactor = 1 + Math.min(0.5, (tempo * 0.04) + (chaos * 0.06));
+    const wildH = lamH * wildFactor;
+    const wildA = lamA * wildFactor;
+
+    UIE_safeOut(`
+        <hr>
+        <h2>QUANTUM REALITY ENGINE</h2>
+        <b>Conservative Reality (Tight / Under Lean)</b><br>
+        λH/λA: ${consH.toFixed(3)} / ${consA.toFixed(3)}<br><br>
+
+        <b>Base Reality (Model Sekarang)</b><br>
+        λH/λA: ${baseH.toFixed(3)} / ${baseA.toFixed(3)}<br><br>
+
+        <b>Wild Reality (High Chaos / High Goals)</b><br>
+        λH/λA: ${wildH.toFixed(3)} / ${wildA.toFixed(3)}<br><br>
+
+        <small>Gunakan untuk melihat spektrum kemungkinan: dari tight sampai wild game.</small>
+    `);
+}
+
+// ===================================================
+// 2) META NARRATIVE ENGINE (MNE_)
+//    - Baca importance, form gap, "big game feel"
+// ===================================================
+function MNE_runMetaNarrative(){
+
+    const imp   = UIE_safeRead("importance_input", 5);
+    const tempo = UIE_safeRead("tempo_input", 5);
+    const chaos = UIE_safeRead("chaos_input", 5);
+
+    const fwH = UIE_safeRead("adv_form_home_w", 0);
+    const fdH = UIE_safeRead("adv_form_home_d", 0);
+    const flH = UIE_safeRead("adv_form_home_l", 0);
+
+    const fwA = UIE_safeRead("adv_form_away_w", 0);
+    const fdA = UIE_safeRead("adv_form_away_d", 0);
+    const flA = UIE_safeRead("adv_form_away_l", 0);
+
+    const formH = (fwH * 2.3) + (fdH * 0.9) - (flH * 1.8);
+    const formA = (fwA * 2.3) + (fdA * 0.9) - (flA * 1.8);
+    const formGap = formH - formA;
+
+    // Narrative Tilt
+    let narrativeTilt = "Netral (tidak condong)";
+    if(formGap >= 4) narrativeTilt = "Narrative condong ke HOME (tim on-fire, momentum fans, hype tinggi)";
+    else if(formGap <= -4) narrativeTilt = "Narrative condong ke AWAY (underdog kuat / giant killer mode)";
+
+    // Emotional Intensity dari importance + tempo + chaos
+    const emoScore = (imp * 1.5) + (tempo * 0.7) + (chaos * 0.8);
+    let emoLabel = "Normal Emotional Intensity";
+    if(emoScore >= 26) emoLabel = "Extreme Emotional Game (derby / final / tekanan besar)";
+    else if(emoScore >= 18) emoLabel = "High Emotional Intensity (laga panas / tensi tinggi)";
+    else if(emoScore <= 10) emoLabel = "Cool / Calm Match (tekanan psikologis relatif rendah)";
+
+    UIE_safeOut(`
+        <hr>
+        <h2>META NARRATIVE ENGINE</h2>
+        <b>Narrative Tilt:</b> ${narrativeTilt}<br>
+        <b>Emotional Intensity:</b> ${emoLabel}<br>
+        <b>Form Index H/A:</b> ${formH.toFixed(2)} / ${formA.toFixed(2)} (Gap: ${formGap.toFixed(2)})<br>
+        <b>Importance/Tempo/Chaos:</b> ${imp} / ${tempo} / ${chaos}<br>
+        <small>Meta Narrative = cerita di balik pertandingan: momentum, hype, tekanan mental.</small>
+    `);
+}
+
+// ===================================================
+// 3) AI FORMATION ADAPTATION (AIF_)
+//    - Pakai fleksibilitas, pressing, chaos → behavior formasi
+// ===================================================
+function AIF_runFormationAI(){
+
+    // Flex bisa dari beberapa ID yang mungkin kamu pakai
+    const flexH = UIE_safeRead("home_flex", UIE_safeRead("flex_home", 5));
+    const flexA = UIE_safeRead("away_flex", UIE_safeRead("flex_away", 5));
+
+    const pressH = UIE_safeRead("home_press", 5);
+    const pressA = UIE_safeRead("away_press", 5);
+
+    const chaos  = UIE_safeRead("chaos_input", 5);
+    const tempo  = UIE_safeRead("tempo_input", 5);
+
+    // Prediksi adaptasi saat unggul / tertinggal
+    function predictBehavior(flex, press, sideLabel){
+        let whenLeading = "Menjaga struktur dasar, sedikit lebih solid.";
+        let whenLosing  = "Naik garis sedikit, namun tidak liar.";
+
+        if(flex >= 7 && press >= 6){
+            whenLeading = "Bisa turun ke blok lebih rendah, tapi tetap siap pressing transisi.";
+            whenLosing  = "Berani naik garis, ubah formasi lebih ofensif (misal tambah striker).";
+        } else if(flex <= 4){
+            whenLeading = "Cenderung parkir bus / menumpuk lini belakang.";
+            whenLosing  = "Sulit adaptasi formasi, lebih mengandalkan individu.";
+        }
+
+        if(chaos >= 7){
+            whenLeading += " Chaos tinggi → risiko kebobolan balasan tetap ada.";
+            whenLosing  += " Chaos tinggi → bisa tercipta comeback tidak terduga.";
+        }
+
+        return `
+            <b>${sideLabel}</b><br>
+            Saat unggul: ${whenLeading}<br>
+            Saat tertinggal: ${whenLosing}<br><br>
+        `;
+    }
+
+    const behHome = predictBehavior(flexH, pressH, "HOME");
+    const behAway = predictBehavior(flexA, pressA, "AWAY");
+
+    UIE_safeOut(`
+        <hr>
+        <h2>AI FORMATION ADAPTATION</h2>
+        Flex HOME/AWAY: ${flexH.toFixed(1)} / ${flexA.toFixed(1)}<br>
+        Press HOME/AWAY: ${pressH.toFixed(1)} / ${pressA.toFixed(1)}<br>
+        Tempo/Chaos: ${tempo} / ${chaos}<br><br>
+        ${behHome}
+        ${behAway}
+        <small>Interpretasi: bagaimana kemungkinan pelatih mengubah formasi saat unggul / tertinggal.</small>
+    `);
+}
+
+// ===================================================
+// 4) UNITED INTELLIGENCE ENGINE (UIE_)
+//    - Mengumpulkan Quantum, Meta, Formation, Omega, Singularity, Fate
+// ===================================================
+function UIE_runUnitedIntelligence(){
+
+    // Jalankan engine lain kalau ada
+    if(typeof QRE_runQuantumReality === "function"){
+        QRE_runQuantumReality();
+    }
+    if(typeof MNE_runMetaNarrative === "function"){
+        MNE_runMetaNarrative();
+    }
+    if(typeof AIF_runFormationAI === "function"){
+        AIF_runFormationAI();
+    }
+    if(typeof OP_runOmegaPrime === "function"){
+        OP_runOmegaPrime();
+    }
+    if(typeof SINF_runInfiniteEngine === "function"){
+        SINF_runInfiniteEngine();
+    }
+    if(typeof FATE_runFateCollapse === "function"){
+        FATE_runFateCollapse();
+    }
+    if(typeof GUN_runGrandUnified === "function"){
+        GUN_runGrandUnified();
+    }
+
+    // Buat meta-resume singkat di akhir
+    const lamH  = UIE_safeRead("lamH", 1.0);
+    const lamA  = UIE_safeRead("lamA", 1.0);
+    const tempo = UIE_safeRead("tempo_input", 5);
+    const chaos = UIE_safeRead("chaos_input", 5);
+    const pressH = UIE_safeRead("home_press", 5);
+    const pressA = UIE_safeRead("away_press", 5);
+
+    const totalLam = lamH + lamA;
+    const avgPress = (pressH + pressA) / 2;
+
+    let verdict = "Pertandingan cenderung seimbang dengan risiko standar.";
+    if(totalLam >= 3 && chaos >= 7){
+        verdict = "Game cenderung liar, banyak gol, hasil bisa swing. Jaga money management.";
+    } else if(totalLam <= 2.2 && chaos <= 4){
+        verdict = "Game cenderung ketat & taktis. Nilai ada di under / skor kecil / arah 1X2 yang jelas.";
+    } else if(Math.abs(lamH - lamA) >= 0.7){
+        verdict = "Model multi-engine melihat sisi yang cukup dominan. Bisa dilirik di 1X2 / handicap.";
+    }
+
+    UIE_safeOut(`
+        <hr>
+        <h2>UNITED INTELLIGENCE ENGINE – FINAL META</h2>
+        <b>United Verdict:</b> ${verdict}<br>
+        Total λ: ${totalLam.toFixed(3)} | Tempo/Chaos: ${tempo} / ${chaos}<br>
+        Avg Press: ${avgPress.toFixed(2)}<br>
+        <small>UIE menggabungkan Quantum, Meta, Formation, Omega, ∞, Fate, dan Grand Unified bila tersedia.</small>
+    `);
 }
   </script>
 </body>
