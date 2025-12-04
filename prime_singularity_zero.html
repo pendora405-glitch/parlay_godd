@@ -273,6 +273,14 @@
 <button onclick="MNE_runMetaNarrative()">META NARRATIVE ENGINE</button>
 <button onclick="AIF_runFormationAI()">AI FORMATION ADAPTATION</button>
 <button onclick="UIE_runUnitedIntelligence()">UNITED INTELLIGENCE ENGINE</button>
+  <button onclick="HRE_runHyperReality()">HYPER-REALITY ENGINE</button>
+<button onclick="GOE_runGeneticOutcome()">GENETIC OUTCOME ENGINE</button>
+<button onclick="CFM_runChaosFractal()">CHAOS FRACTAL MODEL</button>
+<button onclick="DPAI_runDeepPatternAI()">DEEP PATTERN AI</button>
+<button onclick="FSE_runFieldShape()">FIELD SHAPE ENGINE</button>
+<button onclick="FTF_runFutureTrend()">FUTURE TREND FORECASTER</button>
+<button onclick="AMI_runMarketIntel()">MARKET INTELLIGENCE (MODEL)</button>
+<button onclick="MEO_runMetaOrchestrator()">META ENGINE ORCHESTRATOR</button>
   <small>
     Gunakan jika situs tidak menyediakan angka PPDA.  
     Estimasi dibuat dari gaya pressing + xGA + error defensif.  
@@ -3561,6 +3569,296 @@ function UIE_runUnitedIntelligence(){
         Total λ: ${totalLam.toFixed(3)} | Tempo/Chaos: ${tempo} / ${chaos}<br>
         Avg Press: ${avgPress.toFixed(2)}<br>
         <small>UIE menggabungkan Quantum, Meta, Formation, Omega, ∞, Fate, dan Grand Unified bila tersedia.</small>
+    `);
+}
+  </script>
+  <script>
+// ========================================
+// DIMENSIONAL ENGINE HELPERS (AMAN)
+// ========================================
+function DIM_read(id, fallback = 0){
+    const el = document.getElementById(id);
+    if(!el) return fallback;
+    const v = parseFloat(el.value);
+    if(isNaN(v) || !isFinite(v)) return fallback;
+    return v;
+}
+
+function DIM_out(html){
+    const out = document.getElementById("output");
+    if(out) out.innerHTML += html;
+}
+
+// ========================================
+// 1) HRE_ – HYPER-REALITY ENGINE
+//    5 realitas: Tight, Normal, Wild, Collapse, Tactical
+// ========================================
+function HRE_runHyperReality(){
+
+    const lamH  = DIM_read("lamH", 1.0);
+    const lamA  = DIM_read("lamA", 1.0);
+    const tempo = DIM_read("tempo_input", 5);
+    const chaos = DIM_read("chaos_input", 5);
+    const imp   = DIM_read("importance_input", 5);
+
+    const baseH = lamH;
+    const baseA = lamA;
+
+    const tightFactor   = 1 - Math.min(0.3, (imp*0.02) + (chaos*0.015));
+    const wildFactor    = 1 + Math.min(0.6, (tempo*0.05) + (chaos*0.07));
+    const tacticalFactor= 1 - Math.min(0.25, (tempo*0.02)) + (imp*0.015);
+
+    const tightH = baseH * tightFactor;
+    const tightA = baseA * tightFactor;
+
+    const wildH  = baseH * wildFactor;
+    const wildA  = baseA * wildFactor;
+
+    const tactH  = baseH * tacticalFactor;
+    const tactA  = baseA * tacticalFactor;
+
+    // Collapse reality → gol bisa sangat beda karena meltdown
+    const collapseBoost = 1 + Math.min(0.9, (chaos*0.09) + (imp*0.04));
+    const collapseH = baseH * collapseBoost;
+    const collapseA = baseA * collapseBoost;
+
+    DIM_out(`
+        <hr>
+        <h2>HRE – HYPER REALITY ENGINE</h2>
+        <b>1) Tight Reality:</b> λH/λA = ${tightH.toFixed(3)} / ${tightA.toFixed(3)}<br>
+        <b>2) Base Reality:</b> λH/λA = ${baseH.toFixed(3)} / ${baseA.toFixed(3)}<br>
+        <b>3) Wild Reality:</b> λH/λA = ${wildH.toFixed(3)} / ${wildA.toFixed(3)}<br>
+        <b>4) Collapse Reality:</b> λH/λA = ${collapseH.toFixed(3)} / ${collapseA.toFixed(3)}<br>
+        <b>5) Tactical Reality:</b> λH/λA = ${tactH.toFixed(3)} / ${tactA.toFixed(3)}<br>
+        <small>Gunakan untuk melihat spektrum result dari paling ketat sampai paling liar.</small>
+    `);
+}
+
+// ========================================
+// 2) GOE_ – GENETIC OUTCOME ENGINE (versi ringan)
+//    Evolusi sederhana λ dalam beberapa "generasi"
+// ========================================
+function GOE_runGeneticOutcome(){
+
+    let lamH = DIM_read("lamH", 1.0);
+    let lamA = DIM_read("lamA", 1.0);
+
+    const chaos = DIM_read("chaos_input", 5);
+    const errH  = DIM_read("def_error_home", 0);
+    const errA  = DIM_read("def_error_away", 0);
+
+    const generations = 5;
+    let history = [];
+
+    for(let g=1; g<=generations; g++){
+        const noiseH = (Math.random() - 0.5) * (chaos*0.08 + errA*0.04);
+        const noiseA = (Math.random() - 0.5) * (chaos*0.08 + errH*0.04);
+
+        lamH = Math.max(0.1, lamH + noiseH);
+        lamA = Math.max(0.1, lamA + noiseA);
+
+        history.push(`Gen ${g}: λH/λA = ${lamH.toFixed(3)} / ${lamA.toFixed(3)}`);
+    }
+
+    DIM_out(`
+        <hr>
+        <h2>GOE – GENETIC OUTCOME ENGINE</h2>
+        ${history.join("<br>")}
+        <br><small>Simulasi evolusi sederhana berbasis chaos & error untuk melihat variasi potensi skor.</small>
+    `);
+}
+
+// ========================================
+// 3) CFM_ – CHAOS FRACTAL MODEL
+//    Fractal Predictability Index (0–100)
+// ========================================
+function CFM_runChaosFractal(){
+
+    const chaos = DIM_read("chaos_input", 5);
+    const errH  = DIM_read("def_error_home", 0);
+    const errA  = DIM_read("def_error_away", 0);
+    const pressH= DIM_read("home_press", 5);
+    const pressA= DIM_read("away_press", 5);
+
+    const avgErr   = (errH + errA) / 2;
+    const avgPress = (pressH + pressA) / 2;
+
+    let fractalNoise = (chaos*1.7) + (avgErr*1.4) + (avgPress*0.9);
+    fractalNoise = Math.max(0, Math.min(40, fractalNoise));
+
+    const predictability = 100 - (fractalNoise / 40 * 100);
+
+    let label = "Moderate Readability";
+    if(predictability >= 70) label = "High Predictability (model mudah membaca match)";
+    else if(predictability <= 35) label = "Low Predictability (fraktal chaos tinggi, hasil bisa sangat liar)";
+
+    DIM_out(`
+        <hr>
+        <h2>CFM – CHAOS FRACTAL MODEL</h2>
+        <b>Fractal Predictability Index:</b> ${predictability.toFixed(1)} / 100<br>
+        <b>Interpretasi:</b> ${label}<br>
+        <small>Semakin rendah index, semakin berbahaya untuk over-confidence pada satu skenario.</small>
+    `);
+}
+
+// ========================================
+// 4) DPAI_ – DEEP PATTERN AI (sederhana)
+//    Tactical fingerprint berbasis input kunci
+// ========================================
+function DPAI_runDeepPatternAI(){
+
+    const tempo = DIM_read("tempo_input", 5);
+    const chaos = DIM_read("chaos_input", 5);
+    const pressH= DIM_read("home_press", 5);
+    const pressA= DIM_read("away_press", 5);
+    const xgH   = DIM_read("adv_xg_home", 1.2);
+    const xgA   = DIM_read("adv_xg_away", 1.0);
+
+    const totalPress = (pressH + pressA) / 2;
+    const totalXG    = xgH + xgA;
+
+    let fingerprint = "Balanced Control / Mixed Threat";
+    if(totalPress >= 7 && tempo >= 7) fingerprint = "High Press • Vertical Attack • Transition Heavy";
+    else if(tempo <= 4 && chaos <= 4) fingerprint = "Low Tempo • Positional Play • Low Risk";
+    else if(chaos >= 7) fingerprint = "Broken Shape • Chaos • High Exploit on Error";
+
+    let threatType = "General Chance Creation";
+    if(totalXG >= 3) threatType = "High Chance Volume • Likely Multiple Goals";
+    else if(totalXG <= 1.8) threatType = "Limited Chance Volume • Fewer Clear Chances";
+
+    DIM_out(`
+        <hr>
+        <h2>DPAI – DEEP PATTERN AI</h2>
+        <b>Tactical Fingerprint:</b> ${fingerprint}<br>
+        <b>Chance/Threat Profile:</b> ${threatType}<br>
+        <b>Tempo/Chaos:</b> ${tempo} / ${chaos}<br>
+        <b>Avg Press:</b> ${totalPress.toFixed(2)} | Total xG: ${totalXG.toFixed(2)}<br>
+    `);
+}
+
+// ========================================
+// 5) FSE_ – FIELD SHAPE ENGINE (versi abstrak)
+// ========================================
+function FSE_runFieldShape(){
+
+    // Pakai xG & pressing untuk kira-kira shape
+    const xgH = DIM_read("adv_xg_home", 1.2);
+    const xgA = DIM_read("adv_xg_away", 1.0);
+    const pressH = DIM_read("home_press", 5);
+    const pressA = DIM_read("away_press", 5);
+
+    const totalXG = xgH + xgA;
+    const pressGap= pressH - pressA;
+
+    let spaceControl = "Balanced Zone Control";
+    if(pressGap >= 2) spaceControl = "HOME controlling higher zones (pressing line lebih tinggi)";
+    else if(pressGap <= -2) spaceControl = "AWAY controlling higher zones / pressing lebih agresif";
+
+    let corridorDanger = "Mixed Corridor Threat";
+    if(totalXG >= 3.2) corridorDanger = "High Danger di seluruh lini (halfspace + wide)";
+    else if(totalXG <= 1.8) corridorDanger = "Zona bahaya terbatas, sedikit peluang bersih";
+
+    DIM_out(`
+        <hr>
+        <h2>FSE – FIELD SHAPE ENGINE</h2>
+        <b>Space Control:</b> ${spaceControl}<br>
+        <b>Corridor Danger:</b> ${corridorDanger}<br>
+        Total xG: ${totalXG.toFixed(2)} | Press Gap: ${pressGap.toFixed(2)}<br>
+    `);
+}
+
+// ========================================
+// 6) FTF_ – FUTURE TREND FORECASTER (match ke depan)
+// ========================================
+function FTF_runFutureTrend(){
+
+    const formH = (DIM_read("adv_form_home_w",0)*2.3 + DIM_read("adv_form_home_d",0)*0.9 - DIM_read("adv_form_home_l",0)*1.8);
+    const formA = (DIM_read("adv_form_away_w",0)*2.3 + DIM_read("adv_form_away_d",0)*0.9 - DIM_read("adv_form_away_l",0)*1.8);
+
+    const chaos = DIM_read("chaos_input", 5);
+    const imp   = DIM_read("importance_input", 5);
+
+    const trendH = formH - (chaos*0.4) + (imp*0.2);
+    const trendA = formA - (chaos*0.4) + (imp*0.2);
+
+    function labelTrend(v){
+        if(v >= 6) return "Strong Uptrend";
+        if(v >= 2) return "Mild Uptrend";
+        if(v <= -6) return "Strong Downtrend";
+        if(v <= -2) return "Mild Downtrend";
+        return "Sideways / Neutral";
+    }
+
+    DIM_out(`
+        <hr>
+        <h2>FTF – FUTURE TREND FORECASTER</h2>
+        <b>Home Future Trend:</b> ${labelTrend(trendH)} (Score: ${trendH.toFixed(2)})<br>
+        <b>Away Future Trend:</b> ${labelTrend(trendA)} (Score: ${trendA.toFixed(2)})<br>
+        <small>Menggambarkan kecenderungan performa 2–3 match ke depan berdasarkan form + chaos + importance.</small>
+    `);
+}
+
+// ========================================
+// 7) AMI_ – ADAPTIVE MARKET INTELLIGENCE (tanpa odds, murni model)
+// ========================================
+function AMI_runMarketIntel(){
+
+    const lamH = DIM_read("lamH", 1.0);
+    const lamA = DIM_read("lamA", 1.0);
+    const chaos= DIM_read("chaos_input", 5);
+    const tempo= DIM_read("tempo_input", 5);
+
+    const totalLam = lamH + lamA;
+    const balanceGap = Math.abs(lamH - lamA);
+
+    let valueAngle = "Netral (tanpa sisi value mencolok hanya dari model)";
+    if(balanceGap >= 0.7) valueAngle = "Model melihat sisi lebih kuat (value potensial di 1X2/handicap sisi dominan)";
+    if(totalLam >= 3 && chaos >= 7) valueAngle = "Model menunjukkan potensi high-scoring, value bisa muncul di Over/BTTS jika market terlalu ragu";
+
+    DIM_out(`
+        <hr>
+        <h2>AMI – ADAPTIVE MARKET INTELLIGENCE</h2>
+        <b>Value Angle (berdasar model murni, tanpa odds):</b> ${valueAngle}<br>
+        λH/λA: ${lamH.toFixed(3)} / ${lamA.toFixed(3)} | Total: ${totalLam.toFixed(3)}<br>
+        Tempo/Chaos: ${tempo} / ${chaos}<br>
+    `);
+}
+
+// ========================================
+// 8) MEO_ – META ENGINE ORCHESTRATOR (BOS DIMENSIONAL)
+// ========================================
+function MEO_runMetaOrchestrator(){
+
+    // Jalankan semua engine dimensional jika ada
+    if(typeof HRE_runHyperReality === "function") HRE_runHyperReality();
+    if(typeof GOE_runGeneticOutcome === "function") GOE_runGeneticOutcome();
+    if(typeof CFM_runChaosFractal === "function") CFM_runChaosFractal();
+    if(typeof DPAI_runDeepPatternAI === "function") DPAI_runDeepPatternAI();
+    if(typeof FSE_runFieldShape === "function") FSE_runFieldShape();
+    if(typeof FTF_runFutureTrend === "function") FTF_runFutureTrend();
+    if(typeof AMI_runMarketIntel === "function") AMI_runMarketIntel();
+
+    // Meta-resume singkat
+    const lamH  = DIM_read("lamH", 1.0);
+    const lamA  = DIM_read("lamA", 1.0);
+    const tempo = DIM_read("tempo_input", 5);
+    const chaos = DIM_read("chaos_input", 5);
+
+    const totalLam = lamH + lamA;
+    let metaMsg = "Multi-engine menyimpulkan match ini masih dalam spektrum normal (tidak super ekstrem).";
+
+    if(chaos >= 7 && totalLam >= 3){
+        metaMsg = "Meta-engine membaca match ini sebagai: LIAR / HIGH-SCORING / VOLATILE. Hati-hati dengan over-commit.";
+    } else if(chaos <= 4 && totalLam <= 2.2){
+        metaMsg = "Meta-engine membaca match ini sebagai: TIGHT / TACTICAL / LOW-SCORING. Edges lebih halus (under, correct score, Handicap kecil).";
+    }
+
+    DIM_out(`
+        <hr>
+        <h2>MEO – META ENGINE ORCHESTRATOR</h2>
+        <b>Meta Conclusion:</b> ${metaMsg}<br>
+        Total λ: ${totalLam.toFixed(3)} | Tempo/Chaos: ${tempo} / ${chaos}<br>
+        <small>MEO mengorkestrasi seluruh Dimensional Engine untuk memberi gambaran akhir secara makro.</small>
     `);
 }
   </script>
