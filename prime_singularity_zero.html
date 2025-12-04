@@ -380,6 +380,7 @@
   <input id="scoreCap" type="number" min="3" max="8" placeholder="kosongkan untuk auto">
 
   <button id="btn_analyze">ANALYZE PRIME SINGULARITY ZERO</button>
+  <button onclick="OP_runOmegaPrime()">Ω OMEGA PRIME</button>
 </div>
 
 <!-- =========================
@@ -2662,6 +2663,141 @@ function teamTrend(){
     `;
 }
       </script>
+<script>
+// ===============================
+// ∑ OMEGA PRIME ENGINE – CORE
+// ===============================
 
+// Helper baca angka aman dengan beberapa kemungkinan ID
+function OP_read(ids, fallback = 0){
+    for (let i = 0; i < ids.length; i++){
+        const el = document.getElementById(ids[i]);
+        if(el){
+            const v = parseFloat(el.value);
+            if(!isNaN(v) && isFinite(v)) return v;
+        }
+    }
+    return fallback;
+}
+
+// Helper tulis ke output
+function OP_appendOutput(html){
+    const out = document.getElementById("output");
+    if(out){
+        out.innerHTML += html;
+    }
+}
+
+// INTI OMEGA PRIME
+function OP_runOmegaPrime(){
+
+    // --- Baca nilai inti dari engine utama ---
+    const lamH   = OP_read(["lamH", "lambda_home"], 1.0);
+    const lamA   = OP_read(["lamA", "lambda_away"], 1.0);
+
+    const tempo  = OP_read(["tempo_input", "tempo"], 5);
+    const chaos  = OP_read(["chaos_input", "chaos"], 5);
+    const imp    = OP_read(["importance_input", "importance"], 5);
+
+    const pressH = OP_read(["home_press"], 5);
+    const pressA = OP_read(["away_press"], 5);
+
+    const xgH    = OP_read(["adv_xg_home"], 1.2);
+    const xgA    = OP_read(["adv_xg_away"], 1.0);
+    const xgaH   = OP_read(["adv_xga_home"], 1.2);
+    const xgaA   = OP_read(["adv_xga_away"], 1.0);
+
+    const errH   = OP_read(["def_error_home"], 0);
+    const errA   = OP_read(["def_error_away"], 0);
+
+    // --- 1) Dominance Index (siapa lebih menguasai) ---
+    const lamDiff   = lamH - lamA;
+    const xgDiff    = xgH - xgA;
+    const pressDiff = pressH - pressA;
+
+    const domScore = (lamDiff * 1.4) + (xgDiff * 1.1) + (pressDiff * 0.7);
+
+    let dominance = "Balanced";
+    if(domScore >= 3)  dominance = "HOME Favoured";
+    if(domScore >= 6)  dominance = "HOME Strong Favoured";
+    if(domScore <= -3) dominance = "AWAY Favoured";
+    if(domScore <= -6) dominance = "AWAY Strong Favoured";
+
+    // --- 2) Volatility / Risk Index ---
+    const avgErr   = (errH + errA) / 2;
+    const avgXGA   = (xgaH + xgaA) / 2;
+    const avgPress = (pressH + pressA) / 2;
+
+    const riskIndex = 
+        (chaos * 0.35) +
+        (avgErr * 0.25) +
+        (avgXGA * 0.15) +
+        (avgPress * 0.15) +
+        (imp * 0.10);
+
+    let riskLabel = "Moderate Risk";
+    if(riskIndex >= 14) riskLabel = "Extreme Risk / High Variance";
+    else if(riskIndex >= 10) riskLabel = "High Risk / Swingy Match";
+    else if(riskIndex <= 6) riskLabel = "Low Risk / Stable Match";
+
+    // --- 3) Archetype Pertandingan (berdasar tempo, chaos, pressing) ---
+    let archetype = "Balanced Tactical Game";
+    const avgPressInt = avgPress;
+
+    if(tempo >= 7 && chaos >= 7 && avgPressInt >= 7){
+        archetype = "High Tempo • High Chaos • Pressing Battle";
+    } else if(tempo >= 7 && chaos <= 4){
+        archetype = "High Tempo • Controlled Structure";
+    } else if(tempo <= 4 && chaos >= 7){
+        archetype = "Slow Tempo • Chaotic / Error-Driven Match";
+    } else if(tempo <= 4 && chaos <= 4){
+        archetype = "Low Tempo • Compact Tactical Game";
+    } else if(avgPressInt >= 7){
+        archetype = "Aggressive Pressing / Transition Match";
+    }
+
+    // --- 4) Market Focus Suggestion (1X2 vs OU vs BTTS) ---
+    const totalLam = lamH + lamA;
+    let marketFocus = "Neutral / Mixed Market";
+
+    if(totalLam >= 3 && chaos >= 6){
+        marketFocus = "Stronger Edge di Over & BTTS Market";
+    } else if(totalLam <= 2.2 && chaos <= 4){
+        marketFocus = "Stronger Edge di Under & Correct Score";
+    } else if(Math.abs(lamDiff) >= 0.6 && Math.abs(domScore) >= 3){
+        marketFocus = "Stronger Edge di 1X2 / Handicap (dominance jelas)";
+    }
+
+    // --- 5) Confidence Tier (seberapa 'tajam' model) ---
+    // Dasar: seberapa stabil (chaos rendah), error rendah, dominance jelas.
+    let confidenceScore = 0;
+    confidenceScore += (10 - Math.min(10, chaos)) * 0.8; // chaos rendah → +confidence
+    confidenceScore += (10 - Math.min(10, avgErr * 2)) * 0.5;
+    confidenceScore += Math.min(10, Math.abs(domScore)) * 0.4; // dominance besar → +confidence
+
+    let confidenceTier = "Medium Confidence";
+    if(confidenceScore >= 14) confidenceTier = "HIGH CONFIDENCE ZONE";
+    else if(confidenceScore <= 7) confidenceTier = "LOW CONFIDENCE (hindari all-in)";
+
+    // --- 6) Susun Output OMEGA PRIME ---
+    OP_appendOutput(`
+        <hr>
+        <h2>∑ OMEGA PRIME – META ANALYSIS</h2>
+        <b>Match Archetype:</b> ${archetype}<br>
+        <b>Dominance:</b> ${dominance}<br>
+        <b>Risk / Volatility:</b> ${riskLabel} (Index: ${riskIndex.toFixed(2)})<br>
+        <b>Suggested Market Focus:</b> ${marketFocus}<br>
+        <b>Confidence Tier:</b> ${confidenceTier}<br>
+        <br>
+        <b>Model Core Snapshot:</b><br>
+        λH: ${lamH.toFixed(3)} | λA: ${lamA.toFixed(3)}<br>
+        Tempo: ${tempo} | Chaos: ${chaos} | Importance: ${imp}<br>
+        Press H/A: ${pressH.toFixed(2)} / ${pressA.toFixed(2)}<br>
+        xG H/A: ${xgH.toFixed(2)} / ${xgA.toFixed(2)}<br>
+        xGA H/A: ${xgaH.toFixed(2)} / ${xgaA.toFixed(2)}<br>
+        Def Error H/A: ${errH} / ${errA}<br>
+    `);
+}
+</script>
 </body>
   </html>
