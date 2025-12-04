@@ -250,6 +250,7 @@
   </select>
 
   <button id="btn_auto_ppda">AUTO-ESTIMATE PPDA</button>
+  <button onclick="applyPressingFullSystem()">PRESSING FULL SYSTEM</button>
   <small>
     Gunakan jika situs tidak menyediakan angka PPDA.  
     Estimasi dibuat dari gaya pressing + xGA + error defensif.  
@@ -1977,5 +1978,122 @@ function generateGoalFlowMap(){
   out.innerHTML += html;
 }
 </script>
+  <script>
+// ================
+// 1. PPDA Mapping
+// ================
+function extendedPPDA(style){
+  switch(style){
+    case "extreme_high": return 5.0;
+    case "gegenpress": return 7.0;
+    case "hybrid_press": return 10.0;
+    case "deep_low": return 20.0;
+
+    case "man_marking_high": return 5.5;
+    case "positional_high": return 7.5;
+    case "semi_gegenpress": return 8.2;
+    case "reactive_press": return 13.5;
+    case "wing_press": return 14.5;
+    case "inverted_press": return 10.0;
+    case "zonal_midlow": return 17.5;
+    case "ultra_compact": return 19.5;
+    default: return null;
+  }
+}
+
+// ================
+// 2. Press Intensity (1–10)
+// ================
+// Rumus sederhana → PPDA rendah = intensitas tinggi.
+function pressIntensityFromPPDA(ppda){
+  if(!ppda) return 5;
+  let PI = 12 - (ppda / 2);
+  return Math.max(1, Math.min(10, PI));
+}
+
+// ================
+// 3. Press Duel Index (baru)
+// ================
+// Mengukur benturan pressing antar tim.
+function pressDuelIndex(p1, p2){
+  let gap = Math.abs(p1 - p2);
+  let total = p1 + p2;
+
+  // total tinggi: duel agresif
+  // gap besar: satu tim mendominasi pressing
+  return {
+    duel: total >= 14 ? "High Press Duel" :
+           total >= 10 ? "Medium Duel" :
+                          "Low Duel",
+
+    dominance: gap >= 4 ? "One-Sided Pressing" :
+                gap >= 2 ? "Mild Advantage" :
+                           "Balanced"
+  };
+}
+
+// ================
+// 4. Pattern Oracle Booster (menghubungkan pressing ke gaya pertandingan)
+// ================
+function pressingToPatternStyle(p1, p2){
+  const avg = (p1 + p2) / 2;
+
+  if(avg >= 8) return "Chaos Transition Match";
+  if(avg >= 6) return "High Tempo Vertical Match";
+  if(avg >= 4) return "Structured High Press";
+  if(avg >= 3) return "Mid-Block Tactical Match";
+  return "Deep Block Slow Match";
+}
+
+// ================
+// 5. MASTER PATCH: Pressing -> PPDA -> Intensity -> Pattern Oracle
+// ================
+function applyPressingFullSystem(){
+
+  // Ambil gaya pressing
+  const ph = document.getElementById("press_style_home").value;
+  const pa = document.getElementById("press_style_away").value;
+
+  const ppdaH = extendedPPDA(ph);
+  const ppdaA = extendedPPDA(pa);
+
+  // Jika user tidak memiliki PPDA asli → pakai pressing
+  if(ppdaH !== null){
+    document.getElementById("adv_ppda_home").value = ppdaH.toFixed(2);
+  }
+  if(ppdaA !== null){
+    document.getElementById("adv_ppda_away").value = ppdaA.toFixed(2);
+  }
+
+  // Generate Press Intensity
+  const piH = pressIntensityFromPPDA(ppdaH);
+  const piA = pressIntensityFromPPDA(ppdaA);
+
+  // Kirim ke input utama engine (home_press, away_press)
+  document.getElementById("home_press").value = piH;
+  document.getElementById("away_press").value = piA;
+
+  // Duel Index
+  const duel = pressDuelIndex(piH, piA);
+
+  // Pattern Oracle Enhancement
+  const matchStyle = pressingToPatternStyle(piH, piA);
+
+  // Output
+  const out = document.getElementById("output");
+  out.innerHTML += `
+    <hr><h3>[PRESSING FULL SYSTEM]</h3>
+    <b>PPDA Home:</b> ${ppdaH}<br>
+    <b>PPDA Away:</b> ${ppdaA}<br>
+    <b>Press Intensity Home:</b> ${piH}<br>
+    <b>Press Intensity Away:</b> ${piA}<br><br>
+
+    <b>Duel Type:</b> ${duel.duel}<br>
+    <b>Dominance:</b> ${duel.dominance}<br><br>
+
+    <b>Pattern Oracle Style:</b> ${matchStyle}
+  `;
+}
+  </script>
 </body>
   </html>
