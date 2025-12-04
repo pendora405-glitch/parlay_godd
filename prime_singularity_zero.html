@@ -224,6 +224,19 @@
 <option value="inverted_press">Inverted Press</option>
 <option value="zonal_midlow">Zonal Mid-Low Block</option>
 <option value="ultra_compact">Ultra Compact Block</option>
+    <!-- PRESSING EXTENDED OPTIONS -->
+<option value="extreme_high">Extreme High Press</option>
+<option value="gegenpress">Gegenpress</option>
+<option value="hybrid_press">Hybrid Press</option>
+<option value="deep_low">Deep Low Block</option>
+<option value="man_marking_high">Man-Marking High Press</option>
+<option value="positional_high">Positional High Press</option>
+<option value="semi_gegenpress">Semi-Gegenpress</option>
+<option value="reactive_press">Reactive Press</option>
+<option value="wing_press">Wing Press Trap</option>
+<option value="inverted_press">Inverted Press</option>
+<option value="zonal_midlow">Zonal Mid-Low Block</option>
+<option value="ultra_compact">Ultra Compact Block</option>
   </select>
 
   <label>Gaya Pressing Away (jika tidak ada PPDA asli)</label>
@@ -239,6 +252,19 @@
 <option value="hybrid_press">Hybrid Press</option>
 <option value="deep_low">Deep Low Block</option>
 
+<option value="man_marking_high">Man-Marking High Press</option>
+<option value="positional_high">Positional High Press</option>
+<option value="semi_gegenpress">Semi-Gegenpress</option>
+<option value="reactive_press">Reactive Press</option>
+<option value="wing_press">Wing Press Trap</option>
+<option value="inverted_press">Inverted Press</option>
+<option value="zonal_midlow">Zonal Mid-Low Block</option>
+<option value="ultra_compact">Ultra Compact Block</option>
+    <!-- PRESSING EXTENDED OPTIONS -->
+<option value="extreme_high">Extreme High Press</option>
+<option value="gegenpress">Gegenpress</option>
+<option value="hybrid_press">Hybrid Press</option>
+<option value="deep_low">Deep Low Block</option>
 <option value="man_marking_high">Man-Marking High Press</option>
 <option value="positional_high">Positional High Press</option>
 <option value="semi_gegenpress">Semi-Gegenpress</option>
@@ -1791,7 +1817,73 @@ window.addEventListener('DOMContentLoaded', function(){
     });
   }
 });
+// =============================
+// AUTO ESTIMATE PPDA EXTENDED
+// =============================
+function autoPPDA_Extended() {
 
+    const styleH = document.getElementById("press_style_home").value;
+    const styleA = document.getElementById("press_style_away").value;
+
+    const xgaH = parseFloat(document.getElementById("adv_xga_home").value) || 1;
+    const xgaA = parseFloat(document.getElementById("adv_xga_away").value) || 1;
+
+    const errH = parseFloat(document.getElementById("def_error_home").value) || 0;
+    const errA = parseFloat(document.getElementById("def_error_away").value) || 0;
+
+    // Mapping gaya → PPDA dasar
+    function mapPress(style){
+        switch(style){
+            case "extreme_high": return 5.0;
+            case "gegenpress": return 7.0;
+            case "hybrid_press": return 10.0;
+            case "deep_low": return 20.0;
+            case "man_marking_high": return 5.5;
+            case "positional_high": return 7.5;
+            case "semi_gegenpress": return 8.2;
+            case "reactive_press": return 13.5;
+            case "wing_press": return 14.5;
+            case "inverted_press": return 10.0;
+            case "zonal_midlow": return 17.5;
+            case "ultra_compact": return 19.5;
+            default: return null;
+        }
+    }
+
+    // Estimasi PPDA
+    let ppdaH = mapPress(styleH);
+    let ppdaA = mapPress(styleA);
+
+    if(ppdaH !== null){
+        ppdaH -= (xgaA * 0.15);     // lawan banyak tembak → tekanan tinggi
+        ppdaH += (errH * 0.40);     // error naik → PPDA naik
+        document.getElementById("adv_ppda_home").value = ppdaH.toFixed(2);
+    }
+
+    if(ppdaA !== null){
+        ppdaA -= (xgaH * 0.15);
+        ppdaA += (errA * 0.40);
+        document.getElementById("adv_ppda_away").value = ppdaA.toFixed(2);
+    }
+
+    // Auto push → press intensity (dipakai engine utama)
+    if(ppdaH){
+        document.getElementById("home_press").value = (12 - (ppdaH / 2)).toFixed(2);
+    }
+    if(ppdaA){
+        document.getElementById("away_press").value = (12 - (ppdaA / 2)).toFixed(2);
+    }
+
+    // Output
+    const out = document.getElementById("output");
+    out.innerHTML += `
+        <hr>
+        <b>[AUTO PPDA EXTENDED]</b><br>
+        PPDA Home: ${ppdaH ? ppdaH.toFixed(2) : "Manual"}<br>
+        PPDA Away: ${ppdaA ? ppdaA.toFixed(2) : "Manual"}<br>
+    `;
+    }
+    <button onclick="autoPPDA_Extended()">AUTO PRESSING → PPDA EXTENDED</button>
 // =============================================================
 // PART 5 SELESAI — PRIME SINGULARITY ZERO ∑.REBUILD ENGINE COMPLETE
 // =============================================================
