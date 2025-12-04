@@ -231,6 +231,7 @@
 <option value="halfspace-press">Halfspace Pressure System</option>
 <option value="rest-defense-high">Rest Defense High Press</option>
   </select>
+  
   <select>
   <label>Gaya Pressing Away (jika tidak ada PPDA asli)</label>
   <select id="press_style_away">
@@ -2423,6 +2424,44 @@ function INF_runInfinity(){
     `;
 }
   </script>
+  <script>
+// ===============================
+// PRESSING FULL SYSTEM (INFINITY)
+// ===============================
+function runPressingFullSystem(){
+    // Ambil gaya pressing
+    const ph = document.getElementById("press_style_home").value;
+    const pa = document.getElementById("press_style_away").value;
+
+    // Ambil PPDA → kalau user sudah isi manual, pakai manual
+    let ppdaH = parseFloat(document.getElementById("adv_ppda_home").value);
+    let ppdaA = parseFloat(document.getElementById("adv_ppda_away").value);
+
+    if(isNaN(ppdaH)){
+        ppdaH = V20.estimatePPDAFromPressing(ph);
+        document.getElementById("adv_ppda_home").value = ppdaH.toFixed(2);
+    }
+    if(isNaN(ppdaA)){
+        ppdaA = V20.estimatePPDAFromPressing(pa);
+        document.getElementById("adv_ppda_away").value = ppdaA.toFixed(2);
+    }
+
+    // Hitung press intensity
+    const pressH = 12 - (ppdaH / 2);
+    const pressA = 12 - (ppdaA / 2);
+
+    document.getElementById("home_press").value = pressH.toFixed(2);
+    document.getElementById("away_press").value = pressA.toFixed(2);
+
+    // Output
+    const out = document.getElementById("output");
+    out.innerHTML += `
+    <hr><h3>[PRESSING FULL SYSTEM]</h3>
+    PPDA H: ${ppdaH.toFixed(2)} | Press Int: ${pressH.toFixed(2)}<br>
+    PPDA A: ${ppdaA.toFixed(2)} | Press Int: ${pressA.toFixed(2)}<br>
+    `;
+}
+  
 </script>
 </body>
   </html>
