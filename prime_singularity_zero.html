@@ -359,6 +359,7 @@
 <button type="button" onclick="applyAutoElitePlus()">AUTO ELITE+ ENV</button>
 <button type="button" onclick="applyManagerTactics()">AUTO MANAGER TACTICS</button>
 <button type="button" onclick="generateGoalFlowMap()">GOAL FLOW MAP</button>
+  <button onclick="INF_runInfinity()">RUN INFINITY ENGINE</button>
 <!-- =========================
      PARAMETER SIMULASI
 ========================= -->
@@ -2294,6 +2295,134 @@ function analysisSummary(){
         Interpretation: <i>${matchType} → pola permainan diprediksi sesuai metrik tempo/chaos.</i>
     `;
     }
+    <!-- INFINITY CORE: GLOBAL SANITIZER -->
+<script>
+function INF_sanitize(value, fallback = 0){
+    const v = parseFloat(value);
+    if (isNaN(v) || v === undefined || v === null || !isFinite(v)) return fallback;
+    return v;
+}
+
+// Auto-sanitize all number inputs (prevent NaN crashes)
+function INF_autoSanitizeAll(){
+    const inputs = document.querySelectorAll("input[type='number']");
+    inputs.forEach(inp=>{
+        inp.value = INF_sanitize(inp.value, 0);
+    });
+}
+</script>
+<script>
+// INFINITY ACCURACY BOOSTER V3
+function INF_accuracyBoost(lambdaH, lambdaA, chaos, tempo){
+
+    const lh = INF_sanitize(lambdaH, 0.8);
+    const la = INF_sanitize(lambdaA, 0.8);
+
+    const c  = INF_sanitize(chaos, 1);
+    const t  = INF_sanitize(tempo, 1);
+
+    // Anti-overpredictor + anti-underpredictor
+    const modifierH = 1 + ((t * 0.05) + (c * 0.08));
+    const modifierA = 1 + ((t * 0.04) + (c * 0.06));
+
+    // Scaled improvement
+    return {
+        home:  (lh * modifierH).toFixed(3),
+        away:  (la * modifierA).toFixed(3)
+    };
+}
+</script>  
+  <script>
+// INFINITY FORM MOMENTUM ENGINE
+function INF_formMomentum(w, d, l){
+    const win  = INF_sanitize(w, 0);
+    const draw = INF_sanitize(d, 0);
+    const lose = INF_sanitize(l, 0);
+
+    const score = (win * 2.2) + (draw * 0.9) - (lose * 1.4);
+
+    if(score >= 6) return {index: score, label: "High Momentum"};
+    if(score >= 2) return {index: score, label: "Moderate Momentum"};
+    if(score >= -1) return {index: score, label: "Neutral Momentum"};
+    return {index: score, label: "Negative Momentum"};
+}
   </script>
+  <script>
+// INFINITY TACTICAL SCENARIO AUTO-SWITCHER
+function INF_autoScenario(tempo, chaos, pressH, pressA){
+
+    const t = INF_sanitize(tempo);
+    const c = INF_sanitize(chaos);
+    const p = (INF_sanitize(pressH) + INF_sanitize(pressA)) / 2;
+
+    if(t >= 7 && c >= 7) return "Exchange Battle";
+    if(t >= 7 && c <  5) return "High Control Game";
+    if(t <  5 && c >= 7) return "Disjointed Fight";
+    if(t <  5 && c <  5) return "Low-Risk Tactical";
+    if(p >= 7)           return "Pressing Duel";
+    return "Balanced System Game";
+}
+               </script>
+<script>
+// INFINITY SCORELINE PROBABILITY ENGINE
+function INF_scoreProbability(lambdaH, lambdaA, chaos){
+
+    const lh = INF_sanitize(lambdaH);
+    const la = INF_sanitize(lambdaA);
+    const cz = INF_sanitize(chaos);
+
+    const factor = (1 + (cz * 0.15));
+
+    return {
+        high:  (factor * ((lh + la)/2) * 0.32).toFixed(3),
+        mid:   (factor * ((lh + la)/2) * 0.55).toFixed(3),
+        low:   (factor * ((lh + la)/2) * 0.13).toFixed(3),
+    };
+}
+</script>
+  <script>
+// INFINITY FINAL ENGINE LINKER
+function INF_runInfinity(){
+
+    // Sanitize all
+    INF_autoSanitizeAll();
+
+    const lambdaH = document.getElementById("lamH").value;
+    const lambdaA = document.getElementById("lamA").value;
+
+    const tempo  = document.getElementById("tempo").value;
+    const chaos  = document.getElementById("chaos").value;
+
+    const pressH = document.getElementById("home_press").value;
+    const pressA = document.getElementById("away_press").value;
+
+    const formH = INF_formMomentum(
+        adv_form_home_w.value,
+        adv_form_home_d.value,
+        adv_form_home_l.value
+    );
+
+    const formA = INF_formMomentum(
+        adv_form_away_w.value,
+        adv_form_away_d.value,
+        adv_form_away_l.value
+    );
+
+    const scoreBoost = INF_accuracyBoost(lambdaH, lambdaA, chaos, tempo);
+    const scenario   = INF_autoScenario(tempo, chaos, pressH, pressA);
+    const expected   = INF_scoreProbability(lambdaH, lambdaA, chaos);
+
+    // OUTPUT
+    const out = document.getElementById("output");
+    out.innerHTML += `
+    <hr><h3>[INFINITY ENGINE OUTPUT]</h3>
+    Scenario: <b>${scenario}</b><br>
+    Lambda Boost: H ${scoreBoost.home}, A ${scoreBoost.away}<br>
+    Form Momentum: HOME ${formH.label}, AWAY ${formA.label}<br>
+    Goal Probability (High/Mid/Low): ${expected.high} / ${expected.mid} / ${expected.low}<br>
+    `;
+}
+  </script>
+</script>
 </body>
   </html>
