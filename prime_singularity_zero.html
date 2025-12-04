@@ -357,6 +357,7 @@
 <input id="bench_impact" type="number" min="0" max="5" step="1">
 
 <h3>Goal Flow Tools</h3>
+  <button id="btn_auto_ppda_ext">AUTO PPDA EXTENDED</button>
 <button type="button" onclick="applyAutoElitePlus()">AUTO ELITE+ ENV</button>
 <button type="button" onclick="applyManagerTactics()">AUTO MANAGER TACTICS</button>
 <button type="button" onclick="generateGoalFlowMap()">GOAL FLOW MAP</button>
@@ -1808,6 +1809,17 @@ window.addEventListener('DOMContentLoaded', function(){
     });
   }
 });
+    const btnAutoPPDAext = document.getElementById('btn_auto_ppda_ext');
+if (btnAutoPPDAext){
+    btnAutoPPDAext.addEventListener('click', function(){
+        try {
+            autoPPDA_Extended();
+        } catch(e){
+            console.error(e);
+            alert("Error pada AUTO PPDA EXTENDED. Cek input & console.");
+        }
+    });
+    }
 // =============================
 // AUTO ESTIMATE PPDA EXTENDED
 // =============================
@@ -2461,7 +2473,25 @@ function runPressingFullSystem(){
     PPDA A: ${ppdaA.toFixed(2)} | Press Int: ${pressA.toFixed(2)}<br>
     `;
 }
-  
+ // Setelah PPDA selesai dihitung → Hitung Press Intensity otomatis
+if(ppdaH){
+    const pressH = pressIntensityFromPPDA(ppdaH);
+    document.getElementById("home_press").value = pressH.toFixed(2);
+}
+
+if(ppdaA){
+    const pressA = pressIntensityFromPPDA(ppdaA);
+    document.getElementById("away_press").value = pressA.toFixed(2);
+}
+
+// Tambahkan log ke output
+document.getElementById("output").innerHTML += `
+<hr><h3>[AUTO PPDA EXTENDED]</h3>
+PPDA Home: ${(ppdaH||0).toFixed(2)}<br>
+PPDA Away: ${(ppdaA||0).toFixed(2)}<br>
+Press H: ${pressIntensityFromPPDA(ppdaH).toFixed(2)}<br>
+Press A: ${pressIntensityFromPPDA(ppdaA).toFixed(2)}<br>
+`; 
 </script>
 </body>
   </html>
