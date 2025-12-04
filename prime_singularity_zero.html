@@ -396,6 +396,14 @@
 
   <button id="btn_analyze">ANALYZE PRIME SINGULARITY ZERO</button>
   <button onclick="OP_runOmegaPrime()">Ω OMEGA PRIME</button>
+  <button onclick="V21_homeAwayContext()">HOME–AWAY CONTEXT</button>
+<button onclick="V21_injuryImpact()">INJURY IMPACT</button>
+<button onclick="V21_weatherImpact()">WEATHER IMPACT</button>
+<button onclick="V21_matchStateSim()">MATCH STATES</button>
+<button onclick="V21_teamIdentity()">TEAM IDENTITY</button>
+<button onclick="V21_playerStrength()">PLAYER STRENGTH</button>
+<button onclick="V21_refVarImpact()">REF & VAR IMPACT</button>
+<button onclick="V21_runSuite()">RUN SUITE</button>
 </div>
 
 <!-- =========================
@@ -3859,6 +3867,296 @@ function MEO_runMetaOrchestrator(){
         <b>Meta Conclusion:</b> ${metaMsg}<br>
         Total λ: ${totalLam.toFixed(3)} | Tempo/Chaos: ${tempo} / ${chaos}<br>
         <small>MEO mengorkestrasi seluruh Dimensional Engine untuk memberi gambaran akhir secara makro.</small>
+    `);
+}
+  </script>
+  <script>
+// ===================================================
+// V21 HELPERS – aman, tidak menimpa engine lain
+// ===================================================
+function V21_read(id, fallback = 0){
+    const el = document.getElementById(id);
+    if(!el) return fallback;
+    const v = parseFloat(el.value);
+    if(isNaN(v) || !isFinite(v)) return fallback;
+    return v;
+}
+
+function V21_readText(id, fallback = ""){
+    const el = document.getElementById(id);
+    if(!el) return fallback;
+    return (el.value || "").toString();
+}
+
+function V21_out(html){
+    const out = document.getElementById("output");
+    if(out) out.innerHTML += html;
+}
+
+// ===================================================
+// 1) HOME–AWAY CONTEXT ENGINE
+// ===================================================
+function V21_homeAwayContext(){
+
+    const xgH = V21_read("adv_xg_home", 1.2);
+    const xgA = V21_read("adv_xg_away", 1.0);
+
+    const fwH = V21_read("adv_form_home_w",0);
+    const fdH = V21_read("adv_form_home_d",0);
+    const flH = V21_read("adv_form_home_l",0);
+
+    const fwA = V21_read("adv_form_away_w",0);
+    const fdA = V21_read("adv_form_away_d",0);
+    const flA = V21_read("adv_form_away_l",0);
+
+    const formH = fwH*2.3 + fdH*0.9 - flH*1.8;
+    const formA = fwA*2.3 + fdA*0.9 - flA*1.8;
+
+    const imp  = V21_read("importance_input",5);
+
+    // Simple home advantage base (bisa diperkuat nanti)
+    const homeBase = 0.4 * imp;
+    const ratingH  = (xgH*0.5 + formH*0.4) + homeBase;
+    const ratingA  = (xgA*0.5 + formA*0.4);
+
+    const diff = ratingH - ratingA;
+
+    let label = "Balanced (home-away relatif seimbang)";
+    if(diff >= 4) label = "HOME Advantage kuat (venue + form + xG lebih baik)";
+    else if(diff >= 2) label = "HOME sedikit di atas";
+    else if(diff <= -4) label = "AWAY Advantage kuat (form/xG away lebih tajam)";
+    else if(diff <= -2) label = "AWAY sedikit di atas";
+
+    V21_out(`
+        <hr>
+        <h3>V21 – HOME–AWAY CONTEXT</h3>
+        Rating Home: ${ratingH.toFixed(2)}<br>
+        Rating Away: ${ratingA.toFixed(2)}<br>
+        Gap: ${diff.toFixed(2)}<br>
+        Interpretasi: <b>${label}</b><br>
+    `);
+}
+
+// ===================================================
+// 2) INJURIES IMPACT ENGINE
+//    Input (opsional, kalau belum ada → dianggap 0):
+//    inj_home_key, inj_home_other, inj_away_key, inj_away_other
+// ===================================================
+function V21_injuryImpact(){
+
+    const hKey   = V21_read("inj_home_key", 0);
+    const hOther = V21_read("inj_home_other", 0);
+    const aKey   = V21_read("inj_away_key", 0);
+    const aOther = V21_read("inj_away_other", 0);
+
+    // 0–10 skala dampak internal
+    const impactH = (hKey*2.5) + (hOther*1.0);
+    const impactA = (aKey*2.5) + (aOther*1.0);
+
+    let labelH = "Dampak cedera Home: ringan / normal";
+    if(impactH >= 12) labelH = "Dampak cedera Home: BERAT (struktur bisa berubah)";
+    else if(impactH >= 6) labelH = "Dampak cedera Home: SEDANG (tim sedikit turun kualitas)";
+
+    let labelA = "Dampak cedera Away: ringan / normal";
+    if(impactA >= 12) labelA = "Dampak cedera Away: BERAT (struktur bisa berubah)";
+    else if(impactA >= 6) labelA = "Dampak cedera Away: SEDANG (tim sedikit turun kualitas)";
+
+    V21_out(`
+        <hr>
+        <h3>V21 – INJURIES IMPACT</h3>
+        Index Cedera Home: ${impactH.toFixed(2)} → ${labelH}<br>
+        Index Cedera Away: ${impactA.toFixed(2)} → ${labelA}<br>
+        <small>Kalau input cedera belum dibuat di UI, nilai dianggap 0 (no impact).</small>
+    `);
+}
+
+// ===================================================
+// 3) WEATHER IMPACT ENGINE
+//    Input opsional: <select id="weather_type">
+//    value bisa: "normal", "rain", "heavy_rain", "wind", "hot"
+// ===================================================
+function V21_weatherImpact(){
+
+    const weather = V21_readText("weather_type","normal").toLowerCase();
+    const tempo   = V21_read("tempo_input",5);
+    const chaos   = V21_read("chaos_input",5);
+
+    let tempoAdj  = 0;
+    let chaosAdj  = 0;
+    let desc      = "Cuaca normal, tidak banyak mengubah model.";
+
+    if(weather === "rain"){
+        tempoAdj = -0.8;
+        chaosAdj = +0.6;
+        desc = "Hujan: tempo sedikit turun, error & chaos naik sedikit.";
+    } else if(weather === "heavy_rain"){
+        tempoAdj = -1.5;
+        chaosAdj = +1.2;
+        desc = "Hujan deras: tempo turun, banyak error & duel fisik → chaos naik signifikan.";
+    } else if(weather === "wind"){
+        tempoAdj = -0.3;
+        chaosAdj = +0.8;
+        desc = "Angin kencang: crossing / bola atas lebih random, chaos naik.";
+    } else if(weather === "hot"){
+        tempoAdj = -1.0;
+        chaosAdj = -0.3;
+        desc = "Panas: tempo turun, pemain menghemat tenaga, chaos sedikit turun.";
+    }
+
+    const newTempo = Math.max(0, Math.min(10, tempo + tempoAdj));
+    const newChaos = Math.max(0, Math.min(10, chaos + chaosAdj));
+
+    V21_out(`
+        <hr>
+        <h3>V21 – WEATHER IMPACT</h3>
+        Tipe Cuaca: ${weather || "normal"}<br>
+        Tempo awal: ${tempo} → <b>${newTempo.toFixed(1)}</b><br>
+        Chaos awal: ${chaos} → <b>${newChaos.toFixed(1)}</b><br>
+        Interpretasi: ${desc}<br>
+    `);
+}
+
+// ===================================================
+// 4) MATCH STATE SIMULATION (LEADING / TRAILING)
+// ===================================================
+function V21_matchStateSim(){
+
+    const lamH  = V21_read("lamH",1.0);
+    const lamA  = V21_read("lamA",1.0);
+    const tempo = V21_read("tempo_input",5);
+    const chaos = V21_read("chaos_input",5);
+
+    const totalLam = lamH + lamA;
+
+    let whenHomeLeads = "Home cenderung turunkan sedikit tempo dan lebih compact.";
+    let whenHomeLoses = "Home akan naikkan tempo & pressing untuk mengejar.";
+
+    if(tempo >= 7 && chaos >= 7){
+        whenHomeLeads += " Namun karena chaos tinggi, tetap ada risiko kebobolan balasan.";
+        whenHomeLoses += " Laga bisa jadi super liar di babak akhir.";
+    } else if(tempo <= 4 && chaos <= 4){
+        whenHomeLeads = "Home kemungkinan parkir blok / low block untuk menjaga skor.";
+        whenHomeLoses = "Home susah buka tempo, comeback butuh momen bola mati / kesalahan lawan.";
+    }
+
+    let OUimpact = "Total goal model sekitar " + totalLam.toFixed(2) + ".";
+    if(totalLam >= 3.0) OUimpact += " Kondisi ini mendukung skenario Over, terutama jika tim yang tertinggal agresif.";
+    else if(totalLam <= 2.2) OUimpact += " Kondisi ini mendukung Under, apalagi jika tim unggul bermain aman.";
+
+    V21_out(`
+        <hr>
+        <h3>V21 – MATCH STATES SIMULATION</h3>
+        Jika HOME unggul: ${whenHomeLeads}<br>
+        Jika HOME tertinggal: ${whenHomeLoses}<br>
+        Efek ke OU: ${OUimpact}<br>
+    `);
+}
+
+// ===================================================
+// 5) TEAM IDENTITY FACTOR
+//    Input opsional: team_identity_home, team_identity_away (text/select)
+//    Contoh value: "possession", "counter", "vertical", "low_block", "gegenpress"
+// ===================================================
+function V21_teamIdentity(){
+
+    const idH = V21_readText("team_identity_home","unknown").toLowerCase();
+    const idA = V21_readText("team_identity_away","unknown").toLowerCase();
+
+    function labelIdentity(id){
+        switch(id){
+            case "possession": return "Team posisional / kontrol bola tinggi.";
+            case "counter":    return "Team counter-attack / transisi cepat.";
+            case "vertical":   return "Team vertical direct / main cepat ke depan.";
+            case "low_block":  return "Team low block / deep defending.";
+            case "gegenpress": return "Team high press / gegenpressing.";
+            default:           return "Identity tidak spesifik / hybrid.";
+        }
+    }
+
+    V21_out(`
+        <hr>
+        <h3>V21 – TEAM IDENTITY</h3>
+        HOME: ${labelIdentity(idH)}<br>
+        AWAY: ${labelIdentity(idA)}<br>
+        <small>Jika input identity belum dibuat di UI, dianggap 'hybrid'.</small>
+    `);
+}
+
+// ===================================================
+// 6) PLAYER STRENGTH RATIO (ATTACK vs DEFENSE QUALITY)
+//    Input opsional:
+//    att_rating_home, def_rating_home, att_rating_away, def_rating_away (0–10)
+// ===================================================
+function V21_playerStrength(){
+
+    const attH = V21_read("att_rating_home",6.5);
+    const defH = V21_read("def_rating_home",6.5);
+    const attA = V21_read("att_rating_away",6.5);
+    const defA = V21_read("def_rating_away",6.5);
+
+    const offEdgeH = attH - defA;
+    const offEdgeA = attA - defH;
+
+    let sidePref = "Kedua sisi punya peluang serangan yang cukup seimbang.";
+    if(offEdgeH >= 1.5 && offEdgeH > offEdgeA) sidePref = "Serangan HOME punya edge lebih besar ke pertahanan AWAY.";
+    else if(offEdgeA >= 1.5 && offEdgeA > offEdgeH) sidePref = "Serangan AWAY punya edge lebih besar ke pertahanan HOME.";
+
+    V21_out(`
+        <hr>
+        <h3>V21 – PLAYER STRENGTH INDEX</h3>
+        Attack HOME: ${attH} vs Defense AWAY: ${defA} → Edge: ${offEdgeH.toFixed(2)}<br>
+        Attack AWAY: ${attA} vs Defense HOME: ${defH} → Edge: ${offEdgeA.toFixed(2)}<br>
+        Interpretasi: ${sidePref}<br>
+    `);
+}
+
+// ===================================================
+// 7) REFEREE & VAR BIAS MODEL
+//    Input opsional:
+//    ref_strictness (0–10), ref_pen_bias_home, ref_pen_bias_away (0–10)
+// ===================================================
+function V21_refVarImpact(){
+
+    const strict = V21_read("ref_strictness",5);
+    const penH   = V21_read("ref_pen_bias_home",5);
+    const penA   = V21_read("ref_pen_bias_away",5);
+
+    const cardIndex = strict * 1.8;
+    const penIndexH = (strict*0.5) + (penH*1.2);
+    const penIndexA = (strict*0.5) + (penA*1.2);
+
+    let cardLabel = "Kecenderungan kartu: normal.";
+    if(cardIndex >= 14) cardLabel = "Kecenderungan kartu: tinggi (potensi banyak kartu).";
+    else if(cardIndex <= 6) cardLabel = "Kecenderungan kartu: rendah (wasit longgar).";
+
+    let penSide = "Peluang penalti relatif seimbang.";
+    if(penIndexH - penIndexA >= 3) penSide = "Ada bias penalti condong ke HOME (secara probabilitas).";
+    else if(penIndexA - penIndexH >= 3) penSide = "Ada bias penalti condong ke AWAY (secara probabilitas).";
+
+    V21_out(`
+        <hr>
+        <h3>V21 – REFEREE & VAR IMPACT</h3>
+        Card Intensity Index: ${cardIndex.toFixed(2)} → ${cardLabel}<br>
+        Penalty Index HOME: ${penIndexH.toFixed(2)}<br>
+        Penalty Index AWAY: ${penIndexA.toFixed(2)}<br>
+        Interpretasi: ${penSide}<br>
+    `);
+}
+
+// ===================================================
+// 8) V21 SUITE – jalankan semua modul v21
+// ===================================================
+function V21_runSuite(){
+    V21_homeAwayContext();
+    V21_injuryImpact();
+    V21_weatherImpact();
+    V21_matchStateSim();
+    V21_teamIdentity();
+    V21_playerStrength();
+    V21_refVarImpact();
+    V21_out(`
+        <hr><h3>V21 SUITE COMPLETED</h3>
+        <small>Seluruh modul v21 sudah dieksekusi berdasarkan input yang tersedia.</small>
     `);
 }
   </script>
