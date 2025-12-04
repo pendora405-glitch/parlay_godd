@@ -211,6 +211,19 @@
     <option value="mid">Mid Block (seimbang)</option>
     <option value="mid_low">Mid–Low Block</option>
     <option value="low">Low Block / sangat pasif</option>
+    <option value="extreme_high">Extreme High Press</option>
+<option value="gegenpress">Gegenpress</option>
+<option value="hybrid_press">Hybrid Press</option>
+<option value="deep_low">Deep Low Block</option>
+
+<option value="man_marking_high">Man-Marking High Press</option>
+<option value="positional_high">Positional High Press</option>
+<option value="semi_gegenpress">Semi-Gegenpress</option>
+<option value="reactive_press">Reactive Press</option>
+<option value="wing_press">Wing Press Trap</option>
+<option value="inverted_press">Inverted Press</option>
+<option value="zonal_midlow">Zonal Mid-Low Block</option>
+<option value="ultra_compact">Ultra Compact Block</option>
   </select>
 
   <label>Gaya Pressing Away (jika tidak ada PPDA asli)</label>
@@ -221,6 +234,19 @@
     <option value="mid">Mid Block (seimbang)</option>
     <option value="mid_low">Mid–Low Block</option>
     <option value="low">Low Block / sangat pasif</option>
+    <option value="extreme_high">Extreme High Press</option>
+<option value="gegenpress">Gegenpress</option>
+<option value="hybrid_press">Hybrid Press</option>
+<option value="deep_low">Deep Low Block</option>
+
+<option value="man_marking_high">Man-Marking High Press</option>
+<option value="positional_high">Positional High Press</option>
+<option value="semi_gegenpress">Semi-Gegenpress</option>
+<option value="reactive_press">Reactive Press</option>
+<option value="wing_press">Wing Press Trap</option>
+<option value="inverted_press">Inverted Press</option>
+<option value="zonal_midlow">Zonal Mid-Low Block</option>
+<option value="ultra_compact">Ultra Compact Block</option>
   </select>
 
   <button id="btn_auto_ppda">AUTO-ESTIMATE PPDA</button>
@@ -278,7 +304,45 @@
     Nilai tetap bisa kamu edit manual setelah terisi.
   </small>
 </div>
+<!-- ============================
+     PATCH UI – ELITE+ / MANAGER / GOAL FLOW
+     ============================ -->
 
+<h3>Match Context Elite+</h3>
+
+<label>Referee Strictness (0 = longgar, 5 = sangat ketat)</label>
+<input id="ref_strict" type="number" min="0" max="5" step="1">
+
+<label>VAR Style</label>
+<select id="var_style">
+  <option value="normal">Normal</option>
+  <option value="lenient">Cenderung Biarkan Main</option>
+  <option value="strict">Sering Intervensi</option>
+</select>
+
+<label>Stadium Intensity / Crowd Pressure (0–5)</label>
+<input id="stadium_intensity" type="number" min="0" max="5" step="1">
+
+<h3>Manager Tactics</h3>
+
+<label>Coach Risk Profile (0 = sangat konservatif, 5 = sangat berani)</label>
+<input id="coach_risk" type="number" min="0" max="5" step="1">
+
+<label>Likely Tactical Change Timing</label>
+<select id="tactical_timing">
+  <option value="none">Jarang ubah</option>
+  <option value="early">Awal babak 2 (46–60)</option>
+  <option value="mid">Menit 60–75</option>
+  <option value="late">Menit 75+</option>
+</select>
+
+<label>Bench Impact (0 = bench lemah, 5 = bench sangat kuat)</label>
+<input id="bench_impact" type="number" min="0" max="5" step="1">
+
+<h3>Goal Flow Tools</h3>
+<button type="button" onclick="applyAutoElitePlus()">AUTO ELITE+ ENV</button>
+<button type="button" onclick="applyManagerTactics()">AUTO MANAGER TACTICS</button>
+<button type="button" onclick="generateGoalFlowMap()">GOAL FLOW MAP</button>
 <!-- =========================
      PARAMETER SIMULASI
 ========================= -->
@@ -1077,7 +1141,7 @@ V20.fuseOutputs = function(det, chaosM, mc, zero){
 
 // =============================================================
 // PART 4 SELESAI
-// PART 5 = FINAL ENGINE RUNNER + AUTO-CALC + AUTO-TCI + OUTPUT
+/ taee jikaPART 5 = FINAL ENGINE RUNNER + AUTO-CALC + AUTO-TCI + OUTPUT
 // =============================================================
   </script>
   <script>
@@ -1221,6 +1285,20 @@ V20.autoEstimatePPDA = function(){
       case "mid":      return 12.0;  // mid block
       case "mid_low":  return 15.0;  // mid–low
       case "low":      return 18.0;  // low block
+      // Tambahan gaya pressing lengkap
+case "extreme_high": return 5.0;
+case "gegenpress": return 7.0;
+case "hybrid_press": return 10.0;
+case "deep_low": return 20.0;
+
+case "man_marking_high": return 5.5;
+case "positional_high": return 7.5;
+case "semi_gegenpress": return 8.2;
+case "reactive_press": return 13.5;
+case "wing_press": return 14.5;
+case "inverted_press": return 10.0;
+case "zonal_midlow": return 17.5;
+case "ultra_compact": return 19.5;
       default:         return 12.0;  // netral
     }
   }
@@ -1717,6 +1795,187 @@ window.addEventListener('DOMContentLoaded', function(){
 // PART 5 SELESAI — PRIME SINGULARITY ZERO ∑.REBUILD ENGINE COMPLETE
 // =============================================================
 </script>
+<script>
+// Helper aman
+function numSafe(v){ const n = parseFloat(v); return isFinite(n) ? n : 0; }
 
+/* ==========================
+   ELITE+ ENVIRONMENT ENGINE
+   ========================== */
+function autoMatchElitePlus() {
+  const ref  = numSafe(document.getElementById("ref_strict").value);
+  const varS = document.getElementById("var_style").value || "normal";
+  const stad = numSafe(document.getElementById("stadium_intensity").value);
+
+  let tempoBoost = 0;
+  let chaosBoost = 0;
+  let cardRisk   = 0;
+
+  // Wasit ketat → banyak foul & kartu → chaos naik, tempo turun sedikit
+  cardRisk += ref * 1.2;
+  chaosBoost += ref * 0.15;
+  tempoBoost -= ref * 0.05;
+
+  // VAR
+  if (varS === "strict") {
+    chaosBoost -= 0.1;  // permainan sedikit lebih "di-rem"
+    cardRisk   += 1.0;
+  } else if (varS === "lenient") {
+    chaosBoost += 0.1;
+    tempoBoost += 0.1;
+  }
+
+  // Stadium Intensity
+  chaosBoost += stad * 0.1;
+  tempoBoost += stad * 0.05;
+
+  return {
+    tempoBoost,
+    chaosBoost,
+    cardRisk
+  };
+}
+
+function applyAutoElitePlus(){
+  const res = autoMatchElitePlus();
+
+  let tempo = numSafe(document.getElementById("tempo_input").value);
+  let chaos = numSafe(document.getElementById("chaos_input").value);
+
+  tempo += res.tempoBoost;
+  chaos += res.chaosBoost;
+
+  document.getElementById("tempo_input").value = tempo.toFixed(2);
+  document.getElementById("chaos_input").value = chaos.toFixed(2);
+
+  const out = document.getElementById("output");
+  out.innerHTML += `
+    <hr>
+    <h3>[ELITE+ ENVIRONMENT]</h3>
+    Ref & VAR Adjustment:<br>
+    Tempo Boost: ${res.tempoBoost.toFixed(2)}<br>
+    Chaos Boost: ${res.chaosBoost.toFixed(2)}<br>
+    Card Risk Index: ${res.cardRisk.toFixed(1)}<br>
+  `;
+}
+
+/* ==========================
+   MANAGER TACTICS ENGINE
+   ========================== */
+function autoManagerTactics() {
+  const risk   = numSafe(document.getElementById("coach_risk").value);
+  const timing = document.getElementById("tactical_timing").value || "none";
+  const bench  = numSafe(document.getElementById("bench_impact").value);
+
+  let tempoBoost = 0;
+  let chaosBoost = 0;
+  let volatility = 0;
+  let note       = "";
+
+  // Coach risk → pertandingan lebih dinamis
+  tempoBoost += risk * 0.15;
+  chaosBoost += risk * 0.18;
+  volatility += risk * 1.3;
+
+  // Bench kuat → late swings
+  chaosBoost += bench * 0.1;
+  volatility += bench * 0.8;
+
+  if (timing === "early") {
+    note = "Kemungkinan perubahan taktik dini (awal babak 2).";
+    chaosBoost += 0.2;
+  } else if (timing === "mid") {
+    note = "Perubahan taktik utama sekitar menit 60–75.";
+    chaosBoost += 0.3;
+  } else if (timing === "late") {
+    note = "Perubahan taktik cenderung terlambat (75+).";
+    volatility += 0.5;
+  } else {
+    note = "Pelatih cenderung menjaga struktur, jarang ubah taktik.";
+  }
+
+  return {
+    tempoBoost,
+    chaosBoost,
+    volatility,
+    note
+  };
+}
+
+function applyManagerTactics(){
+  const res = autoManagerTactics();
+
+  let tempo = numSafe(document.getElementById("tempo_input").value);
+  let chaos = numSafe(document.getElementById("chaos_input").value);
+
+  tempo += res.tempoBoost;
+  chaos += res.chaosBoost;
+
+  document.getElementById("tempo_input").value = tempo.toFixed(2);
+  document.getElementById("chaos_input").value = chaos.toFixed(2);
+
+  const out = document.getElementById("output");
+  out.innerHTML += `
+    <hr>
+    <h3>[MANAGER TACTICS]</h3>
+    Tactical Volatility Index: ${res.volatility.toFixed(1)}<br>
+    Tempo Boost: ${res.tempoBoost.toFixed(2)}<br>
+    Chaos Boost: ${res.chaosBoost.toFixed(2)}<br>
+    Note: ${res.note}<br>
+  `;
+}
+
+/* ==========================
+   GOAL FLOW MAP ENGINE
+   ========================== */
+function generateGoalFlowMap(){
+  const tempo = numSafe(document.getElementById("tempo_input").value);
+  const chaos = numSafe(document.getElementById("chaos_input").value);
+  const imp   = numSafe(document.getElementById("importance_input").value);
+
+  // Skala dasar peluang gol per 15 menit (belum dinormalisasi)
+  // base pattern: 0–15 agak hati-hati, 15–45 naik, 45–60 spike, 60–90 tergantung chaos
+  let seg = [1, 1.2, 1.3, 1.5, 1.4, 1.3]; // 0–15, 16–30, 31–45, 46–60, 61–75, 76–90
+
+  // Tempo mempengaruhi semua segmen
+  const tFactor = 1 + (tempo / 20);   // tempo 0–10 → faktor ~1–1.5
+  // Chaos menaikkan bagian tengah & akhir
+  const cFactor = 1 + (chaos / 15);   // chaos 0–10 → faktor ~1–1.7
+
+  // Importance → gol sering muncul lebih lambat di awal jika penting
+  const earlyDampen = imp >= 8 ? 0.8 : (imp >= 6 ? 0.9 : 1.0);
+
+  let raw = [];
+  for(let i=0;i<6;i++){
+    let val = seg[i] * tFactor;
+    if(i >= 2) val *= cFactor; // menit 31+ dipengaruhi chaos
+    if(i === 0) val *= earlyDampen;
+    raw.push(val);
+  }
+
+  // Normalisasi jadi persentase
+  const sum = raw.reduce((a,b)=>a+b,0) || 1;
+  const pct = raw.map(v => v / sum * 100);
+
+  const labels = [
+    "Menit 0–15",
+    "Menit 16–30",
+    "Menit 31–45",
+    "Menit 46–60",
+    "Menit 61–75",
+    "Menit 76–90"
+  ];
+
+  let html = `<hr><h3>[GOAL FLOW MAP]</h3>`;
+  html += `<small>Bukan prediksi pasti, hanya distribusi kecenderungan gol berdasarkan tempo/chaos/importance.</small><br><br>`;
+
+  for(let i=0;i<6;i++){
+    html += `${labels[i]} : ${pct[i].toFixed(1)}% potensi gol gabungan<br>`;
+  }
+
+  const out = document.getElementById("output");
+  out.innerHTML += html;
+}
+</script>
 </body>
   </html>
