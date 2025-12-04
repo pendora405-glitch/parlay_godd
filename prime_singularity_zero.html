@@ -3188,5 +3188,158 @@ function GUN_runGrandUnified(){
     `);
 }
   </script>
+  <script>
+// ===================================================
+// UNIVERSAL FALLBACK FUNCTION PACK
+// Mengaktifkan tombol-tombol lama yang belum punya fungsi
+// Semua fungsi aman, tidak menimpa engine utama
+// ===================================================
+
+// 1) Ringkasan analisis akhir (simple)
+function analysisSummary(){
+    const lamH = parseFloat(lamH?.value) || 0;
+    const lamA = parseFloat(lamA?.value) || 0;
+    const tempo = parseFloat(tempo_input?.value) || 0;
+    const chaos = parseFloat(chaos_input?.value) || 0;
+    const pressH = parseFloat(home_press?.value) || 0;
+    const pressA = parseFloat(away_press?.value) || 0;
+
+    output.innerHTML += `
+        <hr><h3>ANALYSIS SUMMARY</h3>
+        λ Home/Away: ${lamH} / ${lamA}<br>
+        Tempo/Chaos: ${tempo} / ${chaos}<br>
+        Press: ${pressH} / ${pressA}<br>
+    `;
+}
+
+// 2) Pressing Full System (fallback sederhana)
+function applyPressingFullSystem(){
+    const ph = parseFloat(home_press?.value) || 0;
+    const pa = parseFloat(away_press?.value) || 0;
+
+    output.innerHTML += `
+        <hr><h3>PRESSING FULL SYSTEM</h3>
+        Press Home: ${ph}<br>
+        Press Away: ${pa}<br>
+    `;
+}
+
+// 3) Heatmap Pressing
+function pressHeatmap(){
+    const h = parseFloat(home_press?.value) || 0;
+    const a = parseFloat(away_press?.value) || 0;
+
+    const bar = v => "█".repeat(Math.max(1, Math.round(v)));
+
+    output.innerHTML += `
+        <hr><h3>PRESS HEATMAP</h3>
+        Home: ${bar(h)} (${h})<br>
+        Away: ${bar(a)} (${a})<br>
+    `;
+}
+
+// 4) Manager Tactical Suggestion
+function applyManagerTactics(){
+    const tempo = parseFloat(tempo_input?.value) || 0;
+    const chaos = parseFloat(chaos_input?.value) || 0;
+
+    let plan = "Standard Approach";
+    if(tempo >= 7 && chaos >= 7) plan = "High Press + Vertical Attack";
+    else if(tempo <= 4 && chaos <= 4) plan = "Compact Block + Build-Up";
+    else if(tempo >= 7 && chaos <= 5) plan = "Structured High Tempo";
+    
+    output.innerHTML += `
+        <hr><h3>MANAGER TACTICS</h3>
+        Recommended Plan: <b>${plan}</b><br>
+    `;
+}
+
+// 5) Elite Environment Analyzer
+function autoEliteEnv(){
+    const imp = parseFloat(importance_input?.value) || 5;
+    const chaos = parseFloat(chaos_input?.value) || 5;
+
+    const eliteScore = (imp * 1.4) + (chaos * 0.8);
+
+    output.innerHTML += `
+        <hr><h3>ELITE ENVIRONMENT</h3>
+        Elite Score: ${eliteScore.toFixed(2)}<br>
+        Level: ${eliteScore >= 14 ? "ELITE MATCH" : "NORMAL MATCH"}<br>
+    `;
+}
+
+// 6) Goal Flow Map (simple)
+function goalFlowMap(){
+    const lamH = parseFloat(lamH?.value) || 1;
+    const lamA = parseFloat(lamA?.value) || 1;
+
+    output.innerHTML += `
+        <hr><h3>GOAL FLOW MAP</h3>
+        Home Scoring Curve: ${(lamH*1.2).toFixed(2)}<br>
+        Away Scoring Curve: ${(lamA*1.2).toFixed(2)}<br>
+    `;
+}
+
+// 7) Summary Match (fallback)
+function runMatchSummary(){
+    const tempo = parseFloat(tempo_input?.value) || 0;
+    const chaos = parseFloat(chaos_input?.value) || 0;
+
+    output.innerHTML += `
+        <hr><h3>MATCH SUMMARY</h3>
+        Tempo: ${tempo}<br>
+        Chaos: ${chaos}<br>
+    `;
+}
+
+// 8) Press Duel
+function runPressDuelIndex(){
+    const ph = parseFloat(home_press?.value) || 0;
+    const pa = parseFloat(away_press?.value) || 0;
+    const diff = ph - pa;
+
+    output.innerHTML += `
+        <hr><h3>PRESS DUEL INDEX</h3>
+        Duel Gap: ${diff.toFixed(2)}<br>
+        Winner: ${diff > 0 ? "HOME" : diff < 0 ? "AWAY" : "BALANCED"}<br>
+    `;
+}
+
+// 9) Advanced Style
+function advancedMatchStyle(){
+    const tempo = parseFloat(tempo_input?.value) || 0;
+    let style = "Balanced";
+    if(tempo >= 7) style = "Fast";
+    else if(tempo <= 4) style = "Slow";
+
+    output.innerHTML += `
+        <hr><h3>ADVANCED MATCH STYLE</h3>
+        Style: ${style}<br>
+    `;
+}
+
+// 10) Team Behavior
+function autoTeamProfile(){
+    const pressH = parseFloat(home_press?.value) || 0;
+    const pressA = parseFloat(away_press?.value) || 0;
+
+    output.innerHTML += `
+        <hr><h3>TEAM PROFILE</h3>
+        Home: ${pressH >= 6 ? "High Press" : "Normal"}<br>
+        Away: ${pressA >= 6 ? "High Press" : "Normal"}<br>
+    `;
+}
+
+// 11) Phase Predictor
+function autoPhasePredictor(){
+    const chaos = parseFloat(chaos_input?.value) || 0;
+    const phase = chaos >= 6 ? "Volatile Mid-game" : "Stable Build-up";
+
+    output.innerHTML += `
+        <hr><h3>MATCH PHASE PREDICTOR</h3>
+        Phase: ${phase}<br>
+    `;
+}
+  </script>
 </body>
   </html>
