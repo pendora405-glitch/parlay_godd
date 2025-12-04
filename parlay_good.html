@@ -553,6 +553,12 @@ hr.line{
 <button onclick="V21_playerStrength()">PLAYER STRENGTH</button>
 <button onclick="V21_refVarImpact()">REF & VAR IMPACT</button>
 <button onclick="V21_runSuite()">RUN SUITE</button>
+  <hr class="line">
+<h3>BRM & PARLAY TOOLS</h3>
+<button onclick="BRM_runBankrollAdvisor()">BRM BANKROLL</button>
+<button onclick="BRM_runParlayHelper()">PARLAY HELPER</button>
+<button onclick="BRM_runEdgeClassifier()">EDGE CLASSIFIER</button>
+<button onclick="BRM_runParlaySuite()">RUN BRM SUITE</button>
 </div>
 
 <!-- =========================
@@ -4309,5 +4315,166 @@ function V21_runSuite(){
     `);
 }
   </script>
+  <!-- ===================================================== -->
+<!-- BRM – BANKROLL & PARLAY UPGRADE LAYER (AMAN READ-ONLY) -->
+<!-- ===================================================== -->
+<script>
+function BRM_read(id, fallback = 0){
+  const el = document.getElementById(id);
+  if(!el) return fallback;
+  const v = parseFloat(el.value);
+  if(isNaN(v) || !isFinite(v)) return fallback;
+  return v;
+}
+function BRM_readText(id, fallback = ""){
+  const el = document.getElementById(id);
+  if(!el) return fallback;
+  return (el.value || "").toString().trim();
+}
+function BRM_out(html){
+  const out = document.getElementById("output");
+  if(out) out.innerHTML += html;
+}
+
+/* ================================================
+   1) BANKROLL & RISK ENGINE (read-only, aman)
+   ================================================ */
+function BRM_runBankrollAdvisor(){
+  const lamH   = BRM_read("lamH", 1.0);
+  const lamA   = BRM_read("lamA", 1.0);
+  const tempo  = BRM_read("tempo_input", BRM_read("tempo", 5));
+  const chaos  = BRM_read("chaos_input", BRM_read("chaos", 5));
+  const pressH = BRM_read("home_press", 5);
+  const pressA = BRM_read("away_press", 5);
+  const totalLam = lamH + lamA;
+  const avgPress = (pressH + pressA)/2;
+
+  const bankroll = BRM_read("bankroll", 0);
+  const profile  = BRM_readText("risk_profile", "normal").toLowerCase();
+
+  let risk = 0;
+  risk += chaos * 4.0;
+  risk += Math.max(0, (totalLam - 2.5)) * 7.0;
+  risk += Math.max(0, (avgPress - 6)) * 3.5;
+  risk += Math.max(0, (tempo - 6)) * 2.5;
+  risk = Math.max(0, Math.min(100, risk));
+
+  let riskLabel = "Moderate Risk";
+  if(risk >= 75) riskLabel = "HIGH RISK • Varians tinggi.";
+  else if(risk <= 35) riskLabel = "LOW RISK • Stabil.";
+
+  let basePct = 1.0;
+  if(profile === "conservative") basePct = 0.5;
+  else if(profile === "aggressive") basePct = 2.0;
+
+  if(risk >= 75) basePct *= 0.6;
+  else if(risk <= 35) basePct *= 1.2;
+
+  const safePct = Math.max(0.2, Math.min(3.0, basePct));
+
+  let moneyText = "";
+  if(bankroll > 0){
+    const stake = bankroll * (safePct/100);
+    moneyText = `Stake aman ≈ <b>${safePct.toFixed(2)}%</b> (${stake.toFixed(2)} uang).<br>`;
+  } else {
+    moneyText = `Stake aman ≈ <b>${safePct.toFixed(2)}%</b> dari bankroll.<br>`;
+  }
+
+  BRM_out(`
+    <hr>
+    <h2>BRM – BANKROLL & RISK ENGINE</h2>
+    Risk Index: <b>${risk.toFixed(1)}</b><br>
+    Level: ${riskLabel}<br>
+    Profil: ${profile}<br>
+    ${moneyText}
+  `);
+}
+
+/* ================================================
+   2) PARLAY HELPER
+   ================================================ */
+function BRM_runParlayHelper(){
+  const chaos  = BRM_read("chaos_input", BRM_read("chaos", 5));
+  const tempo  = BRM_read("tempo_input", BRM_read("tempo", 5));
+  const lamH   = BRM_read("lamH", 1.0);
+  const lamA   = BRM_read("lamA", 1.0);
+  const totalLam = lamH + lamA;
+
+  const profile = BRM_readText("risk_profile", "normal").toLowerCase();
+
+  let maxLeg = 4;
+  if(profile === "conservative") maxLeg = 2;
+  else if(profile === "aggressive") maxLeg = 6;
+
+  if(chaos >= 7) maxLeg = Math.max(2, maxLeg - 1);
+  else if(chaos <= 4) maxLeg += 1;
+  maxLeg = Math.max(2, Math.min(8, maxLeg));
+
+  let hint = "Cocok untuk parlay pendek.";
+  if(totalLam >= 3 && chaos >= 7) hint = "Cocok untuk parlay GOAL (Over/BTTS).";
+  else if(totalLam <= 2.2 && chaos <= 4) hint = "Cocok untuk Under / Draw-ish.";
+
+  BRM_out(`
+    <hr>
+    <h2>BRM – PARLAY HELPER</h2>
+    Saran jumlah leg maksimal: <b>${maxLeg}</b><br>
+    Lingkungan: λ total ${totalLam.toFixed(2)}, chaos ${chaos.toFixed(1)}<br>
+    Hint: ${hint}<br>
+  `);
+}
+
+/* ================================================
+   3) EDGE CLASSIFIER
+   ================================================ */
+function BRM_runEdgeClassifier(){
+  const lamH   = BRM_read("lamH", 1.0);
+  const lamA   = BRM_read("lamA", 1.0);
+  const tempo  = BRM_read("tempo_input", BRM_read("tempo", 5));
+  const chaos  = BRM_read("chaos_input", BRM_read("chaos", 5));
+  const imp    = BRM_read("importance_input", BRM_read("importance", 5));
+
+  const diff = lamH - lamA;
+  const totalLam = lamH + lamA;
+
+  let type = "Netral (semua market valid).";
+  let focus = "Tidak ada edge kuat.";
+
+  if(Math.abs(diff) >= 0.7){
+    if(diff > 0){
+      type = "Side → HOME advantage.";
+      focus = "Cocok 1X / DNB / Handicap Home.";
+    } else {
+      type = "Side → AWAY advantage.";
+      focus = "Cocok X2 / DNB / Handicap Away.";
+    }
+  } else if(totalLam >= 3 && chaos >= 6){
+    type = "Goal Edge → High scoring.";
+    focus = "Fokus: Over / BTTS / multi-goal.";
+  } else if(totalLam <= 2.2 && chaos <= 4){
+    type = "Low scoring edge.";
+    focus = "Fokus: Under / Draw-ish / DNB kecil.";
+  }
+
+  BRM_out(`
+    <hr>
+    <h2>BRM – EDGE CLASSIFIER</h2>
+    λH/λA: ${lamH.toFixed(3)} / ${lamA.toFixed(3)}<br>
+    Edge: <b>${type}</b><br>
+    Fokus market: ${focus}<br>
+  `);
+}
+
+/* ================================================
+   4) MASTER – BRM PARLAY SUITE
+   ================================================ */
+function BRM_runParlaySuite(){
+  BRM_runBankrollAdvisor();
+  BRM_runParlayHelper();
+  BRM_runEdgeClassifier();
+  BRM_out(`
+    <hr><h3>BRM SUITE SELESAI</h3>
+  `);
+}
+</script>
 </body>
   </html>
