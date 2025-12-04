@@ -267,6 +267,8 @@
   <button onclick="autoFlex()">AUTO FLEX</button>
   <button onclick="pressHeatmap()">PRESS HEATMAP</button>
   <button onclick="analysisSummary()">MATCH SUMMARY</button>
+  <button onclick="FATE_runFateCollapse()">FATE COLLAPSE ENGINE</button>
+<button onclick="GUN_runGrandUnified()">GRAND UNIFIED ENGINE</button>
   <small>
     Gunakan jika situs tidak menyediakan angka PPDA.  
     Estimasi dibuat dari gaya pressing + xGA + error defensif.  
@@ -3001,5 +3003,190 @@ function SINF_runInfiniteEngine(){
     `);
 }
 </script>
+  <script>
+// ==================================
+// FATE COLLAPSE ENGINE – BIG MATCH
+// ==================================
+
+// Helper kecil khusus Fate
+function FATE_read(id, fallback = 0){
+    const el = document.getElementById(id);
+    if(!el) return fallback;
+    const v = parseFloat(el.value);
+    if(isNaN(v) || !isFinite(v)) return fallback;
+    return v;
+}
+
+function FATE_out(html){
+    const out = document.getElementById("output");
+    if(out) out.innerHTML += html;
+}
+
+// Engine utama Fate Collapse
+function FATE_runFateCollapse(){
+
+    // Importance & konteks dasar
+    const imp   = FATE_read("importance_input", 5);
+    const tempo = FATE_read("tempo_input", 5);
+    const chaos = FATE_read("chaos_input", 5);
+
+    // Form (W-D-L) untuk momentum besar
+    const fwH = FATE_read("adv_form_home_w", 0);
+    const fdH = FATE_read("adv_form_home_d", 0);
+    const flH = FATE_read("adv_form_home_l", 0);
+
+    const fwA = FATE_read("adv_form_away_w", 0);
+    const fdA = FATE_read("adv_form_away_d", 0);
+    const flA = FATE_read("adv_form_away_l", 0);
+
+    const formIndexH = (fwH * 2.3) + (fdH * 0.8) - (flH * 1.7);
+    const formIndexA = (fwA * 2.3) + (fdA * 0.8) - (flA * 1.7);
+    const formGap    = formIndexH - formIndexA;
+
+    // Press & error & xGA
+    const pressH = FATE_read("home_press", 5);
+    const pressA = FATE_read("away_press", 5);
+    const avgPress = (pressH + pressA) / 2;
+
+    const errH  = FATE_read("def_error_home", 0);
+    const errA  = FATE_read("def_error_away", 0);
+    const avgErr = (errH + errA) / 2;
+
+    const xgaH = FATE_read("adv_xga_home", 1);
+    const xgaA = FATE_read("adv_xga_away", 1);
+    const avgXGA = (xgaH + xgaA) / 2;
+
+    // Lambda dasar
+    const lamH = FATE_read("lamH", 1.0);
+    const lamA = FATE_read("lamA", 1.0);
+    const lamDiff = lamH - lamA;
+
+    // ============================
+    // 1) Hitung "Big Match Factor"
+    // ============================
+    // Importance tinggi + tempo tinggi + chaos tinggi → peluang anomali naik
+    let bigMatchFactor = 0;
+    bigMatchFactor += imp * 1.2;
+    bigMatchFactor += tempo * 0.4;
+    bigMatchFactor += chaos * 0.7;
+
+    // ============================
+    // 2) Hitung "Collapse Potential"
+    // ============================
+    // Jika salah satu tim jauh lebih kuat, tapi chaos + error tinggi → peluang "kejatuhan raksasa"
+    const strengthGap = (lamDiff * 1.6) + (formGap * 0.4);
+    const volatility  = (chaos * 0.7) + (avgErr * 1.1) + (avgXGA * 0.6);
+
+    const collapseScore = (Math.abs(strengthGap) * 0.6) + (volatility * 1.1) + (bigMatchFactor * 0.3);
+
+    // Normalisasi ke 0–100
+    let collapseIndex = collapseScore;
+    if(collapseIndex < 0) collapseIndex = 0;
+    if(collapseIndex > 100) collapseIndex = 100;
+
+    // ============================
+    // 3) Label skenario
+    // ============================
+    let fateLabel = "Normal Competitive Match (anomali kecil)";
+    if(collapseIndex >= 65) fateLabel = "High Fate Collapse Risk (Big Upset / Skor Aneh Berpotensi)";
+    else if(collapseIndex >= 45) fateLabel = "Elevated Fate Risk (Upset / Swing Besar Mungkin Terjadi)";
+    else if(collapseIndex <= 25) fateLabel = "Low Fate Risk (model cenderung stabil)";
+
+    // "Arah" collapse (HOME jatuh atau AWAY jatuh)
+    let collapseSide = "Tidak condong (bisa ke dua arah)";
+    if(strengthGap >= 4) collapseSide = "Jika collapse terjadi: potensi kejutan MELAWAN HOME (tim besar gagal)";
+    else if(strengthGap <= -4) collapseSide = "Jika collapse terjadi: potensi kejutan MELAWAN AWAY (away favorit gagal)";
+
+    // ============================
+    // 4) Output Fate Collapse
+    // ============================
+    FATE_out(`
+        <hr>
+        <h2>FATE COLLAPSE ENGINE – BIG MATCH ANOMALY</h2>
+        <b>Fate Risk Level:</b> ${fateLabel}<br>
+        <b>Fate Collapse Index:</b> ${collapseIndex.toFixed(1)} / 100<br>
+        <b>Collapse Direction:</b> ${collapseSide}<br>
+        <br>
+        <b>Context Snapshot:</b><br>
+        Importance: ${imp} | Tempo: ${tempo} | Chaos: ${chaos}<br>
+        Avg Press: ${avgPress.toFixed(2)} | Avg Def Error: ${avgErr.toFixed(2)} | Avg xGA: ${avgXGA.toFixed(2)}<br>
+        λH/λA: ${lamH.toFixed(3)} / ${lamA.toFixed(3)} (Gap: ${lamDiff.toFixed(3)})<br>
+        Form Index H/A: ${formIndexH.toFixed(2)} / ${formIndexA.toFixed(2)} (Gap: ${formGap.toFixed(2)})<br>
+    `);
+}
+  </script>
+  <script>
+// ========================================
+// GRAND UNIFIED ENGINE – META EXECUTOR
+// ========================================
+
+function GUN_read(id, fallback = 0){
+    const el = document.getElementById(id);
+    if(!el) return fallback;
+    const v = parseFloat(el.value);
+    if(isNaN(v) || !isFinite(v)) return fallback;
+    return v;
+}
+
+function GUN_out(html){
+    const out = document.getElementById("output");
+    if(out) out.innerHTML += html;
+}
+
+function GUN_runGrandUnified(){
+
+    // 1) Jalankan sanitizer kalau ada
+    if(typeof INF_autoSanitizeAll === "function"){
+        INF_autoSanitizeAll();
+    }
+
+    // 2) Panggil engine utama yang ada (tidak error kalau belum ada)
+    if(typeof V20 !== "undefined" && typeof V20.runPrimeZero === "function"){
+        V20.runPrimeZero();
+    }
+    if(typeof INF_runInfinity === "function"){
+        INF_runInfinity();
+    }
+    if(typeof OP_runOmegaPrime === "function"){
+        OP_runOmegaPrime();
+    }
+    if(typeof SINF_runInfiniteEngine === "function"){
+        SINF_runInfiniteEngine();
+    }
+    if(typeof FATE_runFateCollapse === "function"){
+        FATE_runFateCollapse();
+    }
+
+    // 3) Grand Summary singkat berdasarkan nilai setelah semua engine jalan
+    const lamH  = GUN_read("lamH", 1.0);
+    const lamA  = GUN_read("lamA", 1.0);
+    const tempo = GUN_read("tempo_input", 5);
+    const chaos = GUN_read("chaos_input", 5);
+    const pressH = GUN_read("home_press", 5);
+    const pressA = GUN_read("away_press", 5);
+
+    const totalLam = lamH + lamA;
+    const avgPress = (pressH + pressA) / 2;
+
+    let overallMode = "Balanced & Normal Risk";
+    if(chaos >= 7 && totalLam >= 3){
+        overallMode = "High Scoring • Chaotic • Volatile";
+    } else if(chaos <= 4 && totalLam <= 2.2){
+        overallMode = "Low Scoring • Tactical • Compact";
+    } else if(avgPress >= 7 && tempo >= 7){
+        overallMode = "Fast Tempo Pressing War";
+    }
+
+    GUN_out(`
+        <hr>
+        <h2>GRAND UNIFIED ENGINE – FINAL OVERVIEW</h2>
+        <b>Overall Match Mode:</b> ${overallMode}<br>
+        Total λ (Goals): ${totalLam.toFixed(3)}<br>
+        Tempo / Chaos: ${tempo} / ${chaos}<br>
+        Avg Press Intensity: ${avgPress.toFixed(2)}<br>
+        <small>Semua engine (Prime / Infinity / Omega / ∞ / Fate) telah dieksekusi bila tersedia.</small>
+    `);
+}
+  </script>
 </body>
   </html>
