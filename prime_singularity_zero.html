@@ -232,7 +232,7 @@
 <option value="rest-defense-high">Rest Defense High Press</option>
   </select>
   
-  <select>
+  
   <label>Gaya Pressing Away (jika tidak ada PPDA asli)</label>
   <select id="press_style_away">
     <option value="">-- Pilih gaya pressing --</option>
@@ -362,6 +362,11 @@
 <button type="button" onclick="applyManagerTactics()">AUTO MANAGER TACTICS</button>
 <button type="button" onclick="generateGoalFlowMap()">GOAL FLOW MAP</button>
   <button onclick="INF_runInfinity()">RUN INFINITY ENGINE</button>
+  <button onclick="autoMatchDifficulty()">MATCH DIFFICULTY</button>
+  <button onclick="autoPressToMatchStyle()">PRESS → MATCH STYLE</button>
+  <button onclick="setPiecePower()">SET PIECE POWER</button>
+  <button onclick="dynamicMatchFlow()">MATCH FLOW</button>
+  <button onclick="teamTrend()">TEAM TREND</button>
 <!-- =========================
      PARAMETER SIMULASI
 ========================= -->
@@ -2493,5 +2498,170 @@ Press H: ${pressIntensityFromPPDA(ppdaH).toFixed(2)}<br>
 Press A: ${pressIntensityFromPPDA(ppdaA).toFixed(2)}<br>
 `; 
 </script>
+  <script>
+// ===========================
+// AUTO MATCH DIFFICULTY v1.0
+// ===========================
+function autoMatchDifficulty(){
+
+    const xgH = INF_sanitize(adv_xg_home.value, 1);
+    const xgA = INF_sanitize(adv_xg_away.value, 1);
+
+    const formH = INF_sanitize(adv_form_home_w.value*2 + adv_form_home_d.value - adv_form_home_l.value*2);
+    const formA = INF_sanitize(adv_form_away_w.value*2 + adv_form_away_d.value - adv_form_away_l.value*2);
+
+    const pressH = INF_sanitize(home_press.value, 6);
+    const pressA = INF_sanitize(away_press.value, 6);
+
+    const ratingH = (xgH * 0.4) + (formH * 0.3) + (pressH * 0.3);
+    const ratingA = (xgA * 0.4) + (formA * 0.3) + (pressA * 0.3);
+
+    const diff = ratingH - ratingA;
+
+    let level = "Balanced";
+    if(diff >= 4) level = "HOME Strong";
+    if(diff <= -4) level = "AWAY Strong";
+    if(diff >= 8) level = "HOME Dominant";
+    if(diff <= -8) level = "AWAY Dominant";
+
+    output.innerHTML += `
+    <hr><h3>[MATCH DIFFICULTY]</h3>
+    Home Rating: ${ratingH.toFixed(2)}<br>
+    Away Rating: ${ratingA.toFixed(2)}<br>
+    Difficulty: <b>${level}</b><br>
+    `;
+}
+  </script>
+  <script>
+// ===============================================
+// PRESSING → MATCH STYLE AUTO BLENDER v1.0
+// ===============================================
+function autoPressToMatchStyle(){
+
+    const ph = INF_sanitize(home_press.value, 5);
+    const pa = INF_sanitize(away_press.value, 5);
+
+    const avg = (ph + pa) / 2;
+
+    let style = "Balanced";
+
+    if(avg >= 9) style = "Wild / Chaotic";
+    else if(avg >= 7) style = "Fast Tempo";
+    else if(avg >= 5) style = "Balanced Tempo";
+    else if(avg >= 3) style = "Slow Tactical";
+    else style = "Ultra Low Tempo";
+
+    output.innerHTML += `
+    <hr><h3>[PRESS → MATCH STYLE]</h3>
+    Avg Press Intensity: ${avg.toFixed(2)}<br>
+    Auto Style: <b>${style}</b><br>
+    `;
+}
+  </script>
+  <script>
+// ============================
+// SET PIECE POWER MODULE v1.0
+// ============================
+function setPiecePower(){
+
+    const xg = INF_sanitize(adv_xg_home.value + adv_xg_away.value, 2);
+    const chaos = INF_sanitize(chaos_input.value, 5);
+
+    const sp = (xg * 0.3) + (chaos * 0.6);
+
+    let label = "Normal";
+
+    if(sp >= 12) label = "Very High Set-Piece Threat";
+    else if(sp >= 9) label = "High Set-Piece Threat";
+    else if(sp >= 6) label = "Medium Threat";
+    else if(sp <= 3) label = "Low Threat";
+
+    output.innerHTML += `
+    <hr><h3>[SET PIECE PREDICTOR]</h3>
+    Set-Piece Power Score: ${sp.toFixed(2)}<br>
+    Threat Level: <b>${label}</b><br>
+    `;
+}
+  </script>
+  <script>
+// =============================
+// DYNAMIC MATCH FLOW v1.0
+// =============================
+function dynamicMatchFlow(){
+
+    const tempo = INF_sanitize(tempo_input.value, 5);
+    const chaos = INF_sanitize(chaos_input.value, 5);
+    const press = INF_sanitize(
+        (parseFloat(home_press.value)+parseFloat(away_press.value))/2, 
+        5
+    );
+
+    const flow = (tempo * 0.4) + (chaos * 0.3) + (press * 0.3);
+
+    let label = "Stable Control";
+    if(flow >= 8) label = "Highly Volatile";
+    else if(flow >= 6) label = "Dynamic";
+    else if(flow >= 4) label = "Semi-Structured";
+
+    output.innerHTML += `
+    <hr><h3>[MATCH FLOW]</h3>
+    Flow Index: ${flow.toFixed(2)}<br>
+    Flow Type: <b>${label}</b><br>
+    `;
+}
+  </script>
+  <script>
+// =============================
+// DYNAMIC MATCH FLOW v1.0
+// =============================
+function dynamicMatchFlow(){
+
+    const tempo = INF_sanitize(tempo_input.value, 5);
+    const chaos = INF_sanitize(chaos_input.value, 5);
+    const press = INF_sanitize(
+        (parseFloat(home_press.value)+parseFloat(away_press.value))/2, 
+        5
+    );
+
+    const flow = (tempo * 0.4) + (chaos * 0.3) + (press * 0.3);
+
+    let label = "Stable Control";
+    if(flow >= 8) label = "Highly Volatile";
+    else if(flow >= 6) label = "Dynamic";
+    else if(flow >= 4) label = "Semi-Structured";
+
+    output.innerHTML += `
+    <hr><h3>[MATCH FLOW]</h3>
+    Flow Index: ${flow.toFixed(2)}<br>
+    Flow Type: <b>${label}</b><br>
+    `;
+}
+  </script>
+  <script>
+// ==============================
+// TEAM TREND ANALYZER v1.0
+// ==============================
+function teamTrend(){
+
+    const formH = INF_formMomentum(
+        adv_form_home_w.value,
+        adv_form_home_d.value,
+        adv_form_home_l.value
+    );
+
+    const formA = INF_formMomentum(
+        adv_form_away_w.value,
+        adv_form_away_d.value,
+        adv_form_away_l.value
+    );
+
+    output.innerHTML += `
+    <hr><h3>[TEAM TREND]</h3>
+    Home Trend: ${formH.label}<br>
+    Away Trend: ${formA.label}<br>
+    `;
+}
+      </script>
+
 </body>
   </html>
