@@ -247,7 +247,56 @@
     Mengisi otomatis: λH, λA, Momentum, Stability, Press, dan Flex  
     berdasarkan data advanced di atas.
   </small>
+<!-- ==============================
+     PART 1 — PATCH UI
+     ============================== -->
 
+<h2>Patch Enhancements (Match Type + Pressing Premium)</h2>
+
+<h3>Match Type (Premium)</h3>
+<select id="match_type">
+  <option value="">-- Pilih Jenis Laga --</option>
+  <option value="league_normal">Liga Reguler</option>
+  <option value="league_big">Big Match</option>
+  <option value="league_relegation">Relegation Battle</option>
+  <option value="league_title_race">Title Race</option>
+
+  <option value="cup_round">Cup Round</option>
+  <option value="cup_quarter">Cup Quarter Final</option>
+  <option value="cup_semi">Cup Semi Final</option>
+  <option value="cup_final">Cup Final</option>
+
+  <option value="ucl_group">UCL Group Stage</option>
+  <option value="ucl_knockout">UCL Knockout</option>
+  <option value="ucl_final">UCL Final</option>
+</select>
+
+<h3>Pressing Premium</h3>
+
+<label>Home Pressing</label>
+<select id="press_premium_home">
+  <option value="">-- Pilih Pressing --</option>
+  <option value="hp_pro">High Press Pro</option>
+  <option value="hp_trigger">High Press Trigger</option>
+  <option value="mid_press">Mid Compact Press</option>
+  <option value="mid_low_trap">Mid-Low Trap</option>
+  <option value="low_block">Low Block</option>
+</select>
+
+<label>Away Pressing</label>
+<select id="press_premium_away">
+  <option value="">-- Pilih Pressing --</option>
+  <option value="hp_pro">High Press Pro</option>
+  <option value="hp_trigger">High Press Trigger</option>
+  <option value="mid_press">Mid Compact Press</option>
+  <option value="mid_low_trap">Mid-Low Trap</option>
+  <option value="low_block">Low Block</option>
+</select>
+
+<button onclick="applyPatchesToOutput()">Apply Patch</button>
+
+<hr>
+<div id="output">Output asli engine + hasil patch akan muncul di sini.</div>
   <hr class="line">
 
   <h3>Auto-Fill Tempo / Chaos / Importance</h3>
@@ -1717,6 +1766,143 @@ window.addEventListener('DOMContentLoaded', function(){
 // PART 5 SELESAI — PRIME SINGULARITY ZERO ∑.REBUILD ENGINE COMPLETE
 // =============================================================
 </script>
+<!-- ==============================
+     PART 2 — MATCH TYPE BOOST LOGIC
+     ============================== -->
 
+<script>
+function patchMatchType(type){
+    let tempo = 0;
+    let chaos = 0;
+    let importance = 5;
+
+    switch(type){
+
+        /* ===== LIGA ===== */
+        case "league_big":
+            importance = 7.5;
+            tempo += 0.4;
+            chaos += 0.6;
+            break;
+
+        case "league_relegation":
+            importance = 8.5;
+            tempo -= 0.3;
+            chaos += 0.5;
+            break;
+
+        case "league_title_race":
+            importance = 9;
+            tempo += 0.2;
+            chaos += 0.7;
+            break;
+
+        /* ===== CUP ===== */
+        case "cup_quarter":
+            importance = 7.5;
+            tempo += 0.4;
+            break;
+
+        case "cup_semi":
+            importance = 8.5;
+            tempo += 0.7;
+            chaos += 0.8;
+            break;
+
+        case "cup_final":
+            importance = 9.8;
+            tempo += 1.0;
+            chaos += 1.2;
+            break;
+
+        /* ===== UCL ===== */
+        case "ucl_knockout":
+            importance = 9.0;
+            tempo += 0.7;
+            chaos += 1.0;
+            break;
+
+        case "ucl_final":
+            importance = 10;
+            tempo += 1.3;
+            chaos += 1.5;
+            break;
+    }
+
+    return { tempo, chaos, importance };
+}
+</script>
+  <!-- ==============================
+     PART 3 — PRESSING PREMIUM LOGIC
+     ============================== -->
+
+<script>
+function applyPressingPremium(style){
+    switch(style){
+
+        case "hp_pro":
+            return { press:+2, chaos:+1.2, tempo:+1.5 };
+
+        case "hp_trigger":
+            return { press:+1.5, chaos:+0.8, tempo:+1.0 };
+
+        case "mid_press":
+            return { press:+0.5, chaos:+0.3, tempo:+0.4 };
+
+        case "mid_low_trap":
+            return { press:-0.2, chaos:+0.6, tempo:-0.3 };
+
+        case "low_block":
+            return { press:-1.5, chaos:-1.0, tempo:-1.0 };
+
+        default:
+            return { press:0, chaos:0, tempo:0 };
+    }
+}
+</script>
+  <!-- ==============================
+     PART 4 — PATCH OUTPUT LAYER
+     ============================== -->
+
+<script>
+function applyPatchesToOutput(){
+
+    const type = document.getElementById("match_type").value;
+    const ph   = document.getElementById("press_premium_home").value;
+    const pa   = document.getElementById("press_premium_away").value;
+
+    const mt  = patchMatchType(type);
+    const pH  = applyPressingPremium(ph);
+    const pA  = applyPressingPremium(pa);
+
+    let log = "<h3>[PATCH ENHANCED LAYER]</h3>";
+
+    if(type){
+        log += `
+        <b>Match Type:</b> ${type}<br>
+        Tempo +${mt.tempo}<br>
+        Chaos +${mt.chaos}<br>
+        Importance ${mt.importance}<br><br>
+        `;
+    }
+
+    if(ph){
+        log += `
+        <b>Home Pressing:</b> ${ph}<br>
+        Press +${pH.press}, Tempo +${pH.tempo}, Chaos +${pH.chaos}<br><br>
+        `;
+    }
+
+    if(pa){
+        log += `
+        <b>Away Pressing:</b> ${pa}<br>
+        Press +${pA.press}, Tempo +${pA.tempo}, Chaos +${pA.chaos}<br>
+        `;
+    }
+
+    document.getElementById("output").innerHTML += "<hr>" + log;
+}
+</script>
+  
 </body>
   </html>
