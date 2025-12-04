@@ -367,6 +367,7 @@
   <button onclick="setPiecePower()">SET PIECE POWER</button>
   <button onclick="dynamicMatchFlow()">MATCH FLOW</button>
   <button onclick="teamTrend()">TEAM TREND</button>
+  <button onclick="SINF_runInfiniteEngine()">SINGULARITY ∞ ENGINE</button>
 <!-- =========================
      PARAMETER SIMULASI
 ========================= -->
@@ -2792,6 +2793,207 @@ function OP_runOmegaPrime(){
         <b>Model Core Snapshot:</b><br>
         λH: ${lamH.toFixed(3)} | λA: ${lamA.toFixed(3)}<br>
         Tempo: ${tempo} | Chaos: ${chaos} | Importance: ${imp}<br>
+        Press H/A: ${pressH.toFixed(2)} / ${pressA.toFixed(2)}<br>
+        xG H/A: ${xgH.toFixed(2)} / ${xgA.toFixed(2)}<br>
+        xGA H/A: ${xgaH.toFixed(2)} / ${xgaA.toFixed(2)}<br>
+        Def Error H/A: ${errH} / ${errA}<br>
+    `);
+}
+</script>
+  <script>
+// ======================================
+// SINGULARITY ∞ INFINITE ENGINE - CORE
+// ======================================
+
+// Helper baca angka aman (multi ID fallback)
+function SINF_read(ids, fallback = 0){
+    for(let i=0;i<ids.length;i++){
+        const el = document.getElementById(ids[i]);
+        if(el){
+            const v = parseFloat(el.value);
+            if(!isNaN(v) && isFinite(v)) return v;
+        }
+    }
+    return fallback;
+}
+
+// Helper tulis ke output
+function SINF_out(html){
+    const out = document.getElementById("output");
+    if(out){
+        out.innerHTML += html;
+    }
+}
+
+// Model kecil internal untuk ensemble
+function SINF_baseModel(lh, la){
+    return {
+        home: lh,
+        away: la,
+        total: lh + la
+    };
+}
+
+function SINF_infinityModel(lh, la, tempo, chaos){
+    const t = Math.max(0, Math.min(10, tempo));
+    const c = Math.max(0, Math.min(10, chaos));
+
+    const boostH = 1 + (t * 0.03) + (c * 0.04);
+    const boostA = 1 + (t * 0.025) + (c * 0.035);
+
+    const nh = lh * boostH;
+    const na = la * boostA;
+
+    return {
+        home: nh,
+        away: na,
+        total: nh + na
+    };
+}
+
+function SINF_riskAdjustedModel(lh, la, chaos, errH, errA, xgaH, xgaA){
+    const c   = Math.max(0, Math.min(10, chaos));
+    const err = (Math.max(0, errH) + Math.max(0, errA)) / 2;
+    const xga = (Math.max(0, xgaH) + Math.max(0, xgaA)) / 2;
+
+    let vol = (c * 0.4) + (err * 0.3) + (xga * 0.3);
+    vol = Math.max(0, Math.min(20, vol));
+
+    const factor = 1 + (vol / 50); // 0 →1.0 ; 20→1.4
+
+    const nh = lh * factor;
+    const na = la * factor;
+
+    return {
+        home: nh,
+        away: na,
+        total: nh + na,
+        volIndex: vol
+    };
+}
+
+// Hitung seberapa "sepakat" model2 ini
+function SINF_engineAgreement(m1, m2, m3){
+    const avgH = (m1.home + m2.home + m3.home) / 3;
+    const avgA = (m1.away + m2.away + m3.away) / 3;
+
+    const devH = (Math.abs(m1.home-avgH) + Math.abs(m2.home-avgH) + Math.abs(m3.home-avgH)) / 3;
+    const devA = (Math.abs(m1.away-avgA) + Math.abs(m2.away-avgA) + Math.abs(m3.away-avgA)) / 3;
+
+    const spread = devH + devA; // semakin besar → makin tidak sepakat
+    const norm = Math.max(0, Math.min(4, spread)); // clamp
+
+    const agreement = 100 - (norm / 4 * 100); // 0→100, 4→0
+    return Math.max(0, Math.min(100, agreement));
+}
+
+// ===============================
+// FUNGSI UTAMA ∞ ENGINE
+// ===============================
+function SINF_runInfiniteEngine(){
+
+    // 1) Baca lambda dari engine utama
+    const lamH  = SINF_read(["lamH", "lambda_home"], 1.0);
+    const lamA  = SINF_read(["lamA", "lambda_away"], 1.0);
+
+    // 2) Baca tempo / chaos / importance
+    const tempo = SINF_read(["tempo_input", "tempo"], 5);
+    const chaos = SINF_read(["chaos_input", "chaos"], 5);
+    const imp   = SINF_read(["importance_input", "importance"], 5);
+
+    // 3) Baca pressing
+    const pressH = SINF_read(["home_press"], 5);
+    const pressA = SINF_read(["away_press"], 5);
+
+    // 4) Baca xG / xGA
+    const xgH   = SINF_read(["adv_xg_home"], 1.2);
+    const xgA   = SINF_read(["adv_xg_away"], 1.0);
+    const xgaH  = SINF_read(["adv_xga_home"], 1.2);
+    const xgaA  = SINF_read(["adv_xga_away"], 1.0);
+
+    // 5) Baca error defensif
+    const errH  = SINF_read(["def_error_home"], 0);
+    const errA  = SINF_read(["def_error_away"], 0);
+
+    // ======================
+    // BANGUN 3 ENGINE MINI
+    // ======================
+
+    const base   = SINF_baseModel(lamH, lamA);
+    const inf    = SINF_infinityModel(lamH, lamA, tempo, chaos);
+    const riskM  = SINF_riskAdjustedModel(lamH, lamA, chaos, errH, errA, xgaH, xgaA);
+
+    const agree  = SINF_engineAgreement(base, inf, riskM);
+
+    // Ensembe final lambda = rata2
+    const ensHome = (base.home + inf.home + riskM.home) / 3;
+    const ensAway = (base.away + inf.away + riskM.away) / 3;
+    const ensTot  = ensHome + ensAway;
+
+    // ======================
+    // Mode Risiko & Archetype
+    // ======================
+
+    let riskMode = "Normal Risk";
+    if(riskM.volIndex >= 14) riskMode = "EXTREME VOLATILITY (High Swing)";
+    else if(riskM.volIndex >= 9) riskMode = "HIGH VOLATILITY (Swingy)";
+
+    let archetype = "Balanced Tactical Match";
+    const avgPress = (pressH + pressA) / 2;
+
+    if(tempo >= 7 && chaos >= 7 && avgPress >= 7){
+        archetype = "Full-Throttle Chaos & Pressing Battle";
+    } else if(tempo >= 7 && chaos <= 4){
+        archetype = "High Tempo Structured Control";
+    } else if(tempo <= 4 && chaos >= 7){
+        archetype = "Slow Tempo But Error-Driven / Wild Moments";
+    } else if(tempo <= 4 && chaos <= 4){
+        archetype = "Low Tempo Compact Tactical Game";
+    } else if(avgPress >= 7){
+        archetype = "Aggressive Press & Transition-Heavy Game";
+    }
+
+    // ======================
+    // Saran fokus market
+    // ======================
+
+    let market = "Neutral Market Mix (1X2 / OU / BTTS)";
+    if(ensTot >= 3 && chaos >= 6){
+        market = "Fokus: Over / BTTS / Goal Markets";
+    } else if(ensTot <= 2.2 && chaos <= 4){
+        market = "Fokus: Under / Correct Score / HT Markets";
+    } else if(Math.abs(lamH - lamA) >= 0.6){
+        market = "Fokus: 1X2 / Handicap / DNB (Dominance Edge)";
+    }
+
+    // ======================
+    // Confidence dari sisi ∞
+    // ======================
+
+    let confLabel = "MEDIUM CONFIDENCE";
+    if(agree >= 80 && riskM.volIndex <= 8){
+        confLabel = "HIGH CONFIDENCE ZONE (Ensemble Sepakat & Risiko Terkontrol)";
+    } else if(agree <= 50 || riskM.volIndex >= 14){
+        confLabel = "LOW CONFIDENCE (Engine Tidak Kompak / Volatilitas Tinggi)";
+    }
+
+    // ======================
+    // TULIS KE OUTPUT
+    // ======================
+
+    SINF_out(`
+        <hr>
+        <h2>Singularity ∞ Infinite Engine – Ensemble Meta</h2>
+        <b>∞ Archetype:</b> ${archetype}<br>
+        <b>∞ Risk Mode:</b> ${riskMode} (Volatility Index: ${riskM.volIndex.toFixed(2)})<br>
+        <b>∞ Engine Agreement Index:</b> ${agree.toFixed(1)} / 100<br>
+        <b>∞ Ensemble λ:</b> Home ${ensHome.toFixed(3)} | Away ${ensAway.toFixed(3)} | Total ${ensTot.toFixed(3)}<br>
+        <b>∞ Suggested Market Focus:</b> ${market}<br>
+        <b>∞ Confidence Tier:</b> ${confLabel}<br>
+        <br>
+        <b>Core Snapshot:</b><br>
+        λH/λA: ${lamH.toFixed(3)} / ${lamA.toFixed(3)}<br>
+        Tempo/Chaos/Imp: ${tempo} / ${chaos} / ${imp}<br>
         Press H/A: ${pressH.toFixed(2)} / ${pressA.toFixed(2)}<br>
         xG H/A: ${xgH.toFixed(2)} / ${xgA.toFixed(2)}<br>
         xGA H/A: ${xgaH.toFixed(2)} / ${xgaA.toFixed(2)}<br>
