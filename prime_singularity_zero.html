@@ -224,20 +224,12 @@
 <option value="inverted_press">Inverted Press</option>
 <option value="zonal_midlow">Zonal Mid-Low Block</option>
 <option value="ultra_compact">Ultra Compact Block</option>
-    <!-- PRESSING EXTENDED OPTIONS -->
-<option value="extreme_high">Extreme High Press</option>
-<option value="gegenpress">Gegenpress</option>
-<option value="hybrid_press">Hybrid Press</option>
-<option value="deep_low">Deep Low Block</option>
-<option value="man_marking_high">Man-Marking High Press</option>
-<option value="positional_high">Positional High Press</option>
-<option value="semi_gegenpress">Semi-Gegenpress</option>
-<option value="reactive_press">Reactive Press</option>
-<option value="wing_press">Wing Press Trap</option>
-<option value="inverted_press">Inverted Press</option>
-<option value="zonal_midlow">Zonal Mid-Low Block</option>
-<option value="ultra_compact">Ultra Compact Block</option>
-  </select>
+    <option value="box-press">Box Midfield Press</option>
+<option value="diamond-press">Diamond Stagger Press</option>
+<option value="lanepress-wide">Wide Lane Trap Press</option>
+<option value="lanepress-narrow">Narrow Lane Isolation Press</option>
+<option value="halfspace-press">Halfspace Pressure System</option>
+<option value="rest-defense-high">Rest Defense High Press</option>
 
   <label>Gaya Pressing Away (jika tidak ada PPDA asli)</label>
   <select id="press_style_away">
@@ -260,23 +252,21 @@
 <option value="inverted_press">Inverted Press</option>
 <option value="zonal_midlow">Zonal Mid-Low Block</option>
 <option value="ultra_compact">Ultra Compact Block</option>
-    <!-- PRESSING EXTENDED OPTIONS -->
-<option value="extreme_high">Extreme High Press</option>
-<option value="gegenpress">Gegenpress</option>
-<option value="hybrid_press">Hybrid Press</option>
-<option value="deep_low">Deep Low Block</option>
-<option value="man_marking_high">Man-Marking High Press</option>
-<option value="positional_high">Positional High Press</option>
-<option value="semi_gegenpress">Semi-Gegenpress</option>
-<option value="reactive_press">Reactive Press</option>
-<option value="wing_press">Wing Press Trap</option>
-<option value="inverted_press">Inverted Press</option>
-<option value="zonal_midlow">Zonal Mid-Low Block</option>
-<option value="ultra_compact">Ultra Compact Block</option>
+    <option value="box-press">Box Midfield Press</option>
+<option value="diamond-press">Diamond Stagger Press</option>
+<option value="lanepress-wide">Wide Lane Trap Press</option>
+<option value="lanepress-narrow">Narrow Lane Isolation Press</option>
+<option value="halfspace-press">Halfspace Pressure System</option>
+<option value="rest-defense-high">Rest Defense High Press</option>
   </select>
 
   <button id="btn_auto_ppda">AUTO-ESTIMATE PPDA</button>
   <button onclick="applyPressingFullSystem()">PRESSING FULL SYSTEM</button>
+  <button onclick="autoPPDA_Extended()">AUTO PRESSING → PPDA EXTENDED</button>
+  <button onclick="showPressDuel()">PRESS DUEL INDEX</button>
+  <button onclick="autoFlex()">AUTO FLEX</button>
+  <button onclick="pressHeatmap()">PRESS HEATMAP</button>
+  <button onclick="analysisSummary()">MATCH SUMMARY</button>
   <small>
     Gunakan jika situs tidak menyediakan angka PPDA.  
     Estimasi dibuat dari gaya pressing + xGA + error defensif.  
@@ -1883,7 +1873,7 @@ function autoPPDA_Extended() {
         PPDA Away: ${ppdaA ? ppdaA.toFixed(2) : "Manual"}<br>
     `;
     }
-    <button onclick="autoPPDA_Extended()">AUTO PRESSING → PPDA EXTENDED</button>
+  
 // =============================================================
 // PART 5 SELESAI — PRIME SINGULARITY ZERO ∑.REBUILD ENGINE COMPLETE
 // =============================================================
@@ -2186,6 +2176,125 @@ function applyPressingFullSystem(){
     <b>Pattern Oracle Style:</b> ${matchStyle}
   `;
 }
+    // ========== UI FIX: REMOVE DUPLICATE PRESSING OPTIONS ==========
+function fixPressingUI() {
+    const selects = [
+        document.getElementById("press_style_home"),
+        document.getElementById("press_style_away")
+    ];
+
+    selects.forEach(sel => {
+        let seen = {};
+        for (let i = sel.options.length - 1; i >= 0; i--) {
+            const val = sel.options[i].value;
+            if (seen[val]) sel.remove(i);
+            else seen[val] = true;
+        }
+    });
+}
+fixPressingUI();
+    // ========== PRESS DUEL INDEX REPORT ==========
+function showPressDuel() {
+
+    const hPI = parseFloat(document.getElementById("home_press").value) || 0;
+    const aPI = parseFloat(document.getElementById("away_press").value) || 0;
+
+    const gap = Math.abs(hPI - aPI);
+    const total = hPI + aPI;
+
+    let duelType =
+        total >= 16 ? "ULTRA HIGH PRESS DUEL" :
+        total >= 12 ? "HIGH PRESS DUEL" :
+        total >= 8  ? "MID PRESS DUEL" :
+                      "LOW PRESS DUEL";
+
+    let dominance =
+        gap >= 4 ? "Dominance: ONE SIDED" :
+        gap >= 2 ? "Dominance: Slight Advantage" :
+                   "Dominance: Balanced";
+
+    const out = document.getElementById("output");
+
+    out.innerHTML += `
+        <hr><h3>[PRESS DUEL INDEX]</h3>
+        Total Press Intensity: ${total}<br>
+        Duel Type: <b>${duelType}</b><br>
+        Gap: ${gap}<br>
+        ${dominance}<br>
+    `;
+    }
+    // ========== AUTO FLEX ESTIMATION ==========
+function autoFlex() {
+
+    const PIH = parseFloat(document.getElementById("home_press").value) || 5;
+    const PIA = parseFloat(document.getElementById("away_press").value) || 5;
+
+    const errH = parseFloat(document.getElementById("def_error_home").value) || 0;
+    const errA = parseFloat(document.getElementById("def_error_away").value) || 0;
+
+    const xgH = parseFloat(document.getElementById("adv_xg_home").value) || 1;
+    const xgA = parseFloat(document.getElementById("adv_xg_away").value) || 1;
+
+    const imp = parseFloat(document.getElementById("importance_input").value) || 5;
+
+    const flexHome = (PIH * 0.25) + (errH * 0.2) + ((xgH - xgA) * 0.3) + (imp * 0.1);
+    const flexAway = (PIA * 0.25) + (errA * 0.2) + ((xgA - xgH) * 0.3) + (imp * 0.1);
+
+    document.getElementById("flex_home").value = flexHome.toFixed(2);
+    document.getElementById("flex_away").value = flexAway.toFixed(2);
+
+    document.getElementById("output").innerHTML += `
+        <hr><h3>[AUTO FLEX]</h3>
+        FLEX HOME: ${flexHome.toFixed(2)}<br>
+        FLEX AWAY: ${flexAway.toFixed(2)}<br>
+    `;
+    }
+    // ========== PRESSING HEATMAP ==========
+// Simple ASCII visualization
+function pressHeatmap(){
+
+    const h = parseFloat(document.getElementById("home_press").value) || 5;
+    const a = parseFloat(document.getElementById("away_press").value) || 5;
+
+    function bar(v){
+        return "█".repeat(Math.round(v));
+    }
+
+    const out = document.getElementById("output");
+
+    out.innerHTML += `
+        <hr><h3>[PRESSING HEATMAP]</h3>
+        HOME: ${bar(h)} (${h})<br>
+        AWAY: ${bar(a)} (${a})<br>
+        <small>Semakin panjang bar → semakin tinggi intensitas pressing.</small>
+    `;
+    }
+    // ========== MATCH ANALYSIS SUMMARY PRO ==========
+function analysisSummary(){
+
+    const PIH = parseFloat(document.getElementById("home_press").value);
+    const PIA = parseFloat(document.getElementById("away_press").value);
+
+    const chaos = parseFloat(document.getElementById("chaos_input").value);
+    const tempo = parseFloat(document.getElementById("tempo_input").value);
+
+    let matchType =
+        chaos >= 7 ? "CHAOS MATCH" :
+        tempo >= 7 ? "HIGH TEMPO MATCH" :
+        chaos <= 3 ? "CONTROLLED / TACTICAL MATCH" :
+                     "BALANCED GAME";
+
+    const out = document.getElementById("output");
+    out.innerHTML += `
+        <hr><h3>[MATCH SUMMARY PRO]</h3>
+        Match Type: <b>${matchType}</b><br>
+        Home Press: ${PIH}<br>
+        Away Press: ${PIA}<br>
+        Chaos Level: ${chaos}<br>
+        Tempo Level: ${tempo}<br>
+        Interpretation: <i>${matchType} → pola permainan diprediksi sesuai metrik tempo/chaos.</i>
+    `;
+    }
   </script>
 </body>
   </html>
