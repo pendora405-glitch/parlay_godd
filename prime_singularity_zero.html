@@ -165,7 +165,56 @@
     Jika sering ganti formasi (2–3 variasi), flex 0.50–0.80.
   </small>
 </div>
+<!-- ==============================
+     PART 1 — PATCH UI
+     ============================== -->
 
+<h2>Patch Enhancements (Match Type + Pressing Premium)</h2>
+
+<h3>Match Type (Premium)</h3>
+<select id="match_type">
+  <option value="">-- Pilih Jenis Laga --</option>
+  <option value="league_normal">Liga Reguler</option>
+  <option value="league_big">Big Match</option>
+  <option value="league_relegation">Relegation Battle</option>
+  <option value="league_title_race">Title Race</option>
+
+  <option value="cup_round">Cup Round</option>
+  <option value="cup_quarter">Cup Quarter Final</option>
+  <option value="cup_semi">Cup Semi Final</option>
+  <option value="cup_final">Cup Final</option>
+
+  <option value="ucl_group">UCL Group Stage</option>
+  <option value="ucl_knockout">UCL Knockout</option>
+  <option value="ucl_final">UCL Final</option>
+</select>
+
+<h3>Pressing Premium</h3>
+
+<label>Home Pressing</label>
+<select id="press_premium_home">
+  <option value="">-- Pilih Pressing --</option>
+  <option value="hp_pro">High Press Pro</option>
+  <option value="hp_trigger">High Press Trigger</option>
+  <option value="mid_press">Mid Compact Press</option>
+  <option value="mid_low_trap">Mid-Low Trap</option>
+  <option value="low_block">Low Block</option>
+</select>
+
+<label>Away Pressing</label>
+<select id="press_premium_away">
+  <option value="">-- Pilih Pressing --</option>
+  <option value="hp_pro">High Press Pro</option>
+  <option value="hp_trigger">High Press Trigger</option>
+  <option value="mid_press">Mid Compact Press</option>
+  <option value="mid_low_trap">Mid-Low Trap</option>
+  <option value="low_block">Low Block</option>
+</select>
+
+<button onclick="applyPatchesToOutput()">Apply Patch</button>
+
+<hr>
+<div id="output">Output asli engine + hasil patch akan muncul di sini.</div>
 <!-- =========================
      ADVANCED STATS + AUTO-CALC INPUT WAJIB
 ========================= -->
@@ -247,56 +296,7 @@
     Mengisi otomatis: λH, λA, Momentum, Stability, Press, dan Flex  
     berdasarkan data advanced di atas.
   </small>
-<!-- ==============================
-     PART 1 — PATCH UI
-     ============================== -->
 
-<h2>Patch Enhancements (Match Type + Pressing Premium)</h2>
-
-<h3>Match Type (Premium)</h3>
-<select id="match_type">
-  <option value="">-- Pilih Jenis Laga --</option>
-  <option value="league_normal">Liga Reguler</option>
-  <option value="league_big">Big Match</option>
-  <option value="league_relegation">Relegation Battle</option>
-  <option value="league_title_race">Title Race</option>
-
-  <option value="cup_round">Cup Round</option>
-  <option value="cup_quarter">Cup Quarter Final</option>
-  <option value="cup_semi">Cup Semi Final</option>
-  <option value="cup_final">Cup Final</option>
-
-  <option value="ucl_group">UCL Group Stage</option>
-  <option value="ucl_knockout">UCL Knockout</option>
-  <option value="ucl_final">UCL Final</option>
-</select>
-
-<h3>Pressing Premium</h3>
-
-<label>Home Pressing</label>
-<select id="press_premium_home">
-  <option value="">-- Pilih Pressing --</option>
-  <option value="hp_pro">High Press Pro</option>
-  <option value="hp_trigger">High Press Trigger</option>
-  <option value="mid_press">Mid Compact Press</option>
-  <option value="mid_low_trap">Mid-Low Trap</option>
-  <option value="low_block">Low Block</option>
-</select>
-
-<label>Away Pressing</label>
-<select id="press_premium_away">
-  <option value="">-- Pilih Pressing --</option>
-  <option value="hp_pro">High Press Pro</option>
-  <option value="hp_trigger">High Press Trigger</option>
-  <option value="mid_press">Mid Compact Press</option>
-  <option value="mid_low_trap">Mid-Low Trap</option>
-  <option value="low_block">Low Block</option>
-</select>
-
-<button onclick="applyPatchesToOutput()">Apply Patch</button>
-
-<hr>
-<div id="output">Output asli engine + hasil patch akan muncul di sini.</div>
   <hr class="line">
 
   <h3>Auto-Fill Tempo / Chaos / Importance</h3>
