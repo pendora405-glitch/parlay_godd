@@ -307,7 +307,355 @@ PSZ.autoPPDA = function(){
     const xgaA = PSZ.num("adv_xga_away",1.3);
 
     const errH = PSZ.num("adv_err_home",0.10);
-    const errA = PSZ.num("adv_err_away",0.10);
+    const errA = PS//=======================================================
+
+// AUTO TCI v3
+
+// - Menggantikan semua versi lama (v1 / v2 / v2.5)
+
+// - Lebih halus, adaptif, dan tidak menimpa full nilai manual
+
+// =======================================================
+
+
+
+PSZ.autoTCI = function(){
+
+
+
+    PSZ.log("=== AUTO TCI v3 (Smart Blend) ===");
+
+
+
+    // -----------------------------
+
+    // Ambil data dasar (aman walau kosong)
+
+    // -----------------------------
+
+    const ppdaH = PSZ.num("adv_ppda_home",12);
+
+    const ppdaA = PSZ.num("adv_ppda_away",12);
+
+
+
+    const errH  = PSZ.num("adv_err_home",0.10);
+
+    const errA  = PSZ.num("adv_err_away",0.10);
+
+
+
+    const xgH   = PSZ.num("adv_xg_home",1.40);
+
+    const xgA   = PSZ.num("adv_xg_away",1.40);
+
+
+
+    const stH   = PSZ.num("home_st",5);
+
+    const stA   = PSZ.num("away_st",5);
+
+
+
+    const flexH = PSZ.num("home_flex",5);
+
+    const flexA = PSZ.num("away_flex",5);
+
+
+
+    const momH  = PSZ.num("home_mom",5);
+
+    const momA  = PSZ.num("away_mom",5);
+
+
+
+    const styleH = (PSZ.el("style_home")?.value || "");
+
+    const styleA = (PSZ.el("style_away")?.value || "");
+
+    const matchType = (PSZ.el("match_type")?.value || "league").toLowerCase();
+
+
+
+    const fH = PSZ.parseFormation ? PSZ.parseFormation((PSZ.el("formation_home")?.value || "")) : {def:0,mid:0,att:0};
+
+    const fA = PSZ.parseFormation ? PSZ.parseFormation((PSZ.el("formation_away")?.value || "")) : {def:0,mid:0,att:0};
+
+
+
+    const pressH = PSZ.state.pressH || 5;
+
+    const pressA = PSZ.state.pressA || 5;
+
+
+
+    // Optional tambahan (kalau tidak ada inputnya, otomatis 0)
+
+    const injuryH = PSZ.num("inj_home",0);     // 0–3
+
+    const injuryA = PSZ.num("inj_away",0);
+
+    const travelA = PSZ.num("away_travel",0);  // 0–3
+
+    const schedH  = PSZ.num("sched_home",0);   // 0–3
+
+    const schedA  = PSZ.num("sched_away",0);
+
+
+
+    // Pre-flow simple (untuk tempo & chaos)
+
+    let preFlow = (
+
+        (10 - ppdaH) +
+
+        (10 - ppdaA) +
+
+        (pressH + pressA)/2 +
+
+        (momH + momA)/2
+
+    ) / 4;
+
+    preFlow = Math.max(1, Math.min(10, preFlow));
+
+
+
+
+
+    // =============================================================
+
+    // 1) HITUNG TEMPO (AUTO)
+
+    // =============================================================
+
+
+
+    const tempoPress  = ((10-ppdaH)+(10-ppdaA)) * 0.22;
+
+    const tempoXG     = (xgH + xgA - 2.6) * 1.0;
+
+    const tempoMom    = ((momH + momA)/2 - 5) * 0.40;
+
+
+
+    function styleTempo(s){
+
+        if(s === "high_press") return 1.0;
+
+        if(s === "transition") return 0.8;
+
+        if(s === "direct")     return 0.7;
+
+        if(s === "possession") return 0.5;
+
+        if(s === "low_block")  return -1.0;
+
+        return 0;
+
+    }
+
+    const tempoStyle  = styleTempo(styleH) + styleTempo(styleA);
+
+
+
+    let tempoForm = 0;
+
+    if(fH.def === 5 || fA.def === 5) tempoForm -= 1.1;
+
+    if(fH.att >= 3) tempoForm += 0.6;
+
+    if(fA.att >= 3) tempoForm += 0.6;
+
+
+
+    let tempoType = 0;
+
+    if(matchType === "derby")    tempoType += 0.8;
+
+    if(matchType === "friendly") tempoType -= 1.2;
+
+    if(matchType === "final")    tempoType -= 0.5;
+
+
+
+    const tempoFlow   = (preFlow - 5) * 0.5;
+
+    const tempoInjury = -(injuryH + injuryA) * 0.20;
+
+    const tempoSched  = -(schedH + schedA) * 0.20;
+
+
+
+    let autoTempo = 5 + tempoPress + tempoXG + tempoMom + tempoStyle + tempoForm + tempoType + tempoFlow + tempoInjury + tempoSched;
+
+    autoTempo = Math.max(1, Math.min(10, autoTempo));
+
+
+
+
+
+    // =============================================================
+
+    // 2) HITUNG CHAOS (AUTO)
+
+    // =============================================================
+
+
+
+    const chaosErr    = (errH + errA) * 14;
+
+    const chaosPress  = ((pressH + pressA)/2 - 5) * 0.8;
+
+    const chaosMom    = Math.abs(momH - momA) * 0.30;
+
+    const chaosXG     = (xgH + xgA > 3 ? +1.0 : 0);
+
+
+
+    let chaosForm = 0;
+
+    if(styleH === "transition" || styleA === "transition") chaosForm += 1.2;
+
+    if(fH.att >= 3 || fA.att >= 3) chaosForm += 0.8;
+
+
+
+    let chaosType = 0;
+
+    if(matchType === "derby")     chaosType += 1.4;
+
+    if(matchType === "cup")       chaosType += 1.0;
+
+    if(matchType === "final")     chaosType -= 1.0;
+
+    if(matchType === "friendly")  chaosType += 1.8;
+
+
+
+    const chaosTravel = travelA * 0.7;
+
+    const chaosSched  = (schedH + schedA) * 0.45;
+
+
+
+    let autoChaos = 5 + chaosErr + chaosPress + chaosMom + chaosXG + chaosForm + chaosType + chaosTravel + chaosSched;
+
+    autoChaos = Math.max(1, Math.min(10, autoChaos));
+
+
+
+
+
+    // =============================================================
+
+    // 3) HITUNG IMPORTANCE (AUTO)
+
+    // =============================================================
+
+
+
+    const baseImp = {
+
+        league: 5,
+
+        bigmatch: 7,
+
+        cup: 7,
+
+        knockout: 8,
+
+        final: 9,
+
+        relegation: 9,
+
+        derby: 8,
+
+        friendly: 3
+
+    };
+
+    let autoImp = baseImp[matchType] || 5;
+
+
+
+    const impSt    = ((stH + stA)/2 - 5) * 0.25;
+
+    const clutch   = ((momH + momA)/2 - 5) * 0.20;
+
+    const impInj   = -(injuryH + injuryA) * 0.20;
+
+
+
+    autoImp = autoImp + impSt + clutch + impInj;
+
+    autoImp = Math.max(1, Math.min(10, autoImp));
+
+
+
+
+
+    // =============================================================
+
+    // 4) SMART BLEND dengan input manual (kalau ada)
+
+    // =============================================================
+
+
+
+    // Kalau user sudah isi angka, jangan dibuang total → kita blend
+
+    const oldTempo = PSZ.num("tempo_input", 5);
+
+    const oldChaos = PSZ.num("chaos_input", 5);
+
+    const oldImp   = PSZ.num("importance_input", 5);
+
+
+
+    // 70% auto, 30% manual (supaya kamu masih bisa koreksi sesuai feeling)
+
+    const finalTempo = (autoTempo*0.7 + oldTempo*0.3);
+
+    const finalChaos = (autoChaos*0.7 + oldChaos*0.3);
+
+    const finalImp   = (autoImp*0.7   + oldImp*0.3);
+
+
+
+    PSZ.el("tempo_input").value      = finalTempo.toFixed(1);
+
+    PSZ.el("chaos_input").value      = finalChaos.toFixed(1);
+
+    PSZ.el("importance_input").value = finalImp.toFixed(1);
+
+
+
+    PSZ.log("AUTO TCI v3 RESULT:");
+
+    PSZ.log("Tempo (auto)      : " + autoTempo.toFixed(1) + " → final: " + finalTempo.toFixed(1));
+
+    PSZ.log("Chaos (auto)      : " + autoChaos.toFixed(1) + " → final: " + finalChaos.toFixed(1));
+
+    PSZ.log("Importance (auto) : " + autoImp.toFixed(1)   + " → final: " + finalImp.toFixed(1));
+
+};
+
+
+
+
+
+// =======================================================
+
+// BIND KE TOMBOL (PAKAI YANG SUDAH ADA)
+
+// =======================================================
+
+if(PSZ.el("btnTCI"))      PSZ.el("btnTCI").onclick      = ()=> PSZ.autoTCI();
+
+if(PSZ.el("btnAutoTCI"))  PSZ.el("btnAutoTCI").onclick  = ()=> PSZ.autoTCI();
+
+Z.num("adv_err_away",0.10);
 
     // Koreksi berdasarkan xGA (pressing tinggi → xGA rendah)
     ppdaH += (xgaH - 1.2) * 2.5;
@@ -330,52 +678,7 @@ PSZ.autoPPDA = function(){
 };
 
 
-// =============================================
-// AUTO TCI (Tempo / Chaos / Importance)
-// =============================================
-PSZ.autoTCI = function(){
 
-    const matchType = PSZ.el("match_type")?.value || "";
-
-    let tempo = 5, chaos = 5, imp = 5;
-
-    switch(matchType){
-        case "league":
-            tempo = 5; chaos = 5; imp = 5;
-            break;
-        case "derby":
-            tempo = 7; chaos = 7; imp = 6;
-            break;
-        case "cup":
-            tempo = 6; chaos = 6; imp = 7;
-            break;
-        case "final":
-            tempo = 5; chaos = 4; imp = 9;
-            break;
-        case "relegation":
-            tempo = 4; chaos = 5; imp = 8;
-            break;
-        case "friendly":
-            tempo = 6; chaos = 7; imp = 3;
-            break;
-    }
-
-    PSZ.el("tempo_input").value      = tempo;
-    PSZ.el("chaos_input").value      = chaos;
-    PSZ.el("importance_input").value = imp;
-
-    PSZ.log("Auto TCI di-set berdasarkan match type.");
-};
-
-
-// =============================================
-// BIND TOMBOL PART 1
-// =============================================
-PSZ.el("btnValidate").onclick = ()=> PSZ.validateInput();
-PSZ.el("btnAutoPPDA").onclick = ()=> PSZ.autoPPDA();
-PSZ.el("btnTCI").onclick      = ()=> PSZ.autoTCI();
-
-PSZ.log("PART 1 Loaded: Input + AutoPPDA + Validator + TCI OK.");
 
 </script>
 <!-- ============================================
