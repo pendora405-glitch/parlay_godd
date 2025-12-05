@@ -231,454 +231,403 @@
 <div id="outputBox"></div>
 </div>
  <!-- ============================================
-PART 1 – INPUT SYSTEM (FINAL CLEAN TEMPLATE)
+PART 1 – PREMIUM INPUT ENGINE (FINAL VERSION)
+Bagian A
 =============================================== -->
 
 <script>
-// Global PSZ namespace (jangan diubah)
-window.PSZ = {
-    state : {},
-    log : function(msg){
-        const el = document.getElementById("output");
-        if(el) el.value += msg + "\n";
-    },
-    el  : function(id){return document.getElementById(id);},
-    num : function(id, def){
-        const el = document.getElementById(id);
-        if(!el) return def;
-        const v = parseFloat(el.value);
-        return isNaN(v) ? def : v;
+// ==================================================
+// 0. NAMESPACE GLOBAL
+// ==================================================
+if(!window.PSZ){
+    window.PSZ = {};
+}
+PSZ.state = PSZ.state || {};
+
+PSZ.el = function(id){ return document.getElementById(id); };
+
+PSZ.num = function(id, def){
+    const el = PSZ.el(id);
+    if(!el) return def;
+    const v = parseFloat(el.value);
+    return isNaN(v) ? def : v;
+};
+
+PSZ.log = function(msg){
+    const out = PSZ.el("output");
+    if(out){
+        out.value += msg + "\n";
+        out.scrollTop = out.scrollHeight;
     }
 };
 
-// ===============================
-//  INPUT VALIDATOR (clean)
-// ===============================
+
+// ==================================================
+// 1. VALIDASI INPUT (highlight yang kosong)
+// ==================================================
 PSZ.validateInput = function(){
+
     const required = [
         "adv_xg_home","adv_xg_away",
         "adv_xga_home","adv_xga_away",
-        "adv_err_home","adv_err_away"
+        "adv_err_home","adv_err_away",
+        "home_st","away_st",
+        "home_flex","away_flex",
+        "home_mom","away_mom"
     ];
 
     required.forEach(id=>{
         const el = PSZ.el(id);
-        if(el && el.value.trim()===""){
-            el.style.background = "#ffdad6";  // highlight merah lembut
-        } else if(el){
+        if(!el) return;
+        if(el.value.trim()===""){
+            el.style.background = "#ffe0e0";
+        }else{
             el.style.background = "";
         }
     });
 
-    PSZ.log("Validator: Input dicek.");
+    PSZ.log("Validator: input utama dicek.");
 };
 
 
-// ===============================
-// PRESSING PRESET → PPDA MAP
-// ===============================
+// ==================================================
+// 2. FORMATION PARSER "4-3-3" → {def,mid,att,extra}
+// ==================================================
+PSZ.parseFormation = function(f){
+    if(!f) return {def:0,mid:0,att:0,extra:0};
+    const parts = f.split("-")
+        .map(x=>parseInt(x.trim(),10))
+        .filter(x=>!isNaN(x));
+    return {
+        def: parts[0] || 0,
+        mid: parts[1] || 0,
+        att: parts[2] || 0,
+        extra: parts[3] || 0
+    };
+};
+
+
+// ==================================================
+// 3. PRESSING PRESET → PPDA
+// ==================================================
 PSZ.pressingPresetToPPDA = function(style){
 
+    // Sesuaikan dengan opsi di dropdown kamu
     switch(style){
-        case "extreme_high": return 4.5;
-        case "gegenpress":   return 6.5;
-        case "high":         return 8.5;
-        case "mid":          return 10.5;
-        case "mid_low":      return 12.5;
-        case "low":          return 15.5;
-        default:             return 11.0;
+        case "extreme_high":  return 4.5;
+        case "gegenpress":    return 5.5;
+        case "high_press":    return 7.0;
+        case "mid_press":     return 9.5;
+        case "mid_block":     return 11.5;
+        case "low_block":     return 14.5;
+        case "passive":       return 17.0;
+        default:              return 11.0;
     }
 };
 
+// Konversi PPDA → Pressing Impact 0–10
+PSZ.pressImpact = function(ppda){
+    return Math.max(0, Math.min(10, 12 - (ppda * 0.55)));
+};
 
-// =============================================
-// AUTO PPDA EXTENDED v2
-// Menggunakan: gaya pressing + xGA + error rate
-// =============================================
+
+// ==================================================
+// 4. AUTO PPDA (pakai gaya pressing + xGA + error)
+// ==================================================
 PSZ.autoPPDA = function(){
 
-    const ph = PSZ.el("press_home")?.value || "";
-    const pa = PSZ.el("press_away")?.value || "";
+    const styleH = (PSZ.el("press_home")?.value || "").trim();
+    const styleA = (PSZ.el("press_away")?.value || "").trim();
 
-    let ppdaH = PSZ.pressingPresetToPPDA(ph);
-    let ppdaA = PSZ.pressingPresetToPPDA(pa);
+    let ppdaH = PSZ.pressingPresetToPPDA(styleH);
+    let ppdaA = PSZ.pressingPresetToPPDA(styleA);
 
     const xgaH = PSZ.num("adv_xga_home",1.3);
     const xgaA = PSZ.num("adv_xga_away",1.3);
 
     const errH = PSZ.num("adv_err_home",0.10);
-    const errA = PS//=======================================================
-
-// AUTO TCI v3
-
-// - Menggantikan semua versi lama (v1 / v2 / v2.5)
-
-// - Lebih halus, adaptif, dan tidak menimpa full nilai manual
-
-// =======================================================
-
-
-
-PSZ.autoTCI = function(){
-
-
-
-    PSZ.log("=== AUTO TCI v3 (Smart Blend) ===");
-
-
-
-    // -----------------------------
-
-    // Ambil data dasar (aman walau kosong)
-
-    // -----------------------------
-
-    const ppdaH = PSZ.num("adv_ppda_home",12);
-
-    const ppdaA = PSZ.num("adv_ppda_away",12);
-
-
-
-    const errH  = PSZ.num("adv_err_home",0.10);
-
-    const errA  = PSZ.num("adv_err_away",0.10);
-
-
-
-    const xgH   = PSZ.num("adv_xg_home",1.40);
-
-    const xgA   = PSZ.num("adv_xg_away",1.40);
-
-
-
-    const stH   = PSZ.num("home_st",5);
-
-    const stA   = PSZ.num("away_st",5);
-
-
-
-    const flexH = PSZ.num("home_flex",5);
-
-    const flexA = PSZ.num("away_flex",5);
-
-
-
-    const momH  = PSZ.num("home_mom",5);
-
-    const momA  = PSZ.num("away_mom",5);
-
-
-
-    const styleH = (PSZ.el("style_home")?.value || "");
-
-    const styleA = (PSZ.el("style_away")?.value || "");
-
-    const matchType = (PSZ.el("match_type")?.value || "league").toLowerCase();
-
-
-
-    const fH = PSZ.parseFormation ? PSZ.parseFormation((PSZ.el("formation_home")?.value || "")) : {def:0,mid:0,att:0};
-
-    const fA = PSZ.parseFormation ? PSZ.parseFormation((PSZ.el("formation_away")?.value || "")) : {def:0,mid:0,att:0};
-
-
-
-    const pressH = PSZ.state.pressH || 5;
-
-    const pressA = PSZ.state.pressA || 5;
-
-
-
-    // Optional tambahan (kalau tidak ada inputnya, otomatis 0)
-
-    const injuryH = PSZ.num("inj_home",0);     // 0–3
-
-    const injuryA = PSZ.num("inj_away",0);
-
-    const travelA = PSZ.num("away_travel",0);  // 0–3
-
-    const schedH  = PSZ.num("sched_home",0);   // 0–3
-
-    const schedA  = PSZ.num("sched_away",0);
-
-
-
-    // Pre-flow simple (untuk tempo & chaos)
-
-    let preFlow = (
-
-        (10 - ppdaH) +
-
-        (10 - ppdaA) +
-
-        (pressH + pressA)/2 +
-
-        (momH + momA)/2
-
-    ) / 4;
-
-    preFlow = Math.max(1, Math.min(10, preFlow));
-
-
-
-
-
-    // =============================================================
-
-    // 1) HITUNG TEMPO (AUTO)
-
-    // =============================================================
-
-
-
-    const tempoPress  = ((10-ppdaH)+(10-ppdaA)) * 0.22;
-
-    const tempoXG     = (xgH + xgA - 2.6) * 1.0;
-
-    const tempoMom    = ((momH + momA)/2 - 5) * 0.40;
-
-
-
-    function styleTempo(s){
-
-        if(s === "high_press") return 1.0;
-
-        if(s === "transition") return 0.8;
-
-        if(s === "direct")     return 0.7;
-
-        if(s === "possession") return 0.5;
-
-        if(s === "low_block")  return -1.0;
-
-        return 0;
-
-    }
-
-    const tempoStyle  = styleTempo(styleH) + styleTempo(styleA);
-
-
-
-    let tempoForm = 0;
-
-    if(fH.def === 5 || fA.def === 5) tempoForm -= 1.1;
-
-    if(fH.att >= 3) tempoForm += 0.6;
-
-    if(fA.att >= 3) tempoForm += 0.6;
-
-
-
-    let tempoType = 0;
-
-    if(matchType === "derby")    tempoType += 0.8;
-
-    if(matchType === "friendly") tempoType -= 1.2;
-
-    if(matchType === "final")    tempoType -= 0.5;
-
-
-
-    const tempoFlow   = (preFlow - 5) * 0.5;
-
-    const tempoInjury = -(injuryH + injuryA) * 0.20;
-
-    const tempoSched  = -(schedH + schedA) * 0.20;
-
-
-
-    let autoTempo = 5 + tempoPress + tempoXG + tempoMom + tempoStyle + tempoForm + tempoType + tempoFlow + tempoInjury + tempoSched;
-
-    autoTempo = Math.max(1, Math.min(10, autoTempo));
-
-
-
-
-
-    // =============================================================
-
-    // 2) HITUNG CHAOS (AUTO)
-
-    // =============================================================
-
-
-
-    const chaosErr    = (errH + errA) * 14;
-
-    const chaosPress  = ((pressH + pressA)/2 - 5) * 0.8;
-
-    const chaosMom    = Math.abs(momH - momA) * 0.30;
-
-    const chaosXG     = (xgH + xgA > 3 ? +1.0 : 0);
-
-
-
-    let chaosForm = 0;
-
-    if(styleH === "transition" || styleA === "transition") chaosForm += 1.2;
-
-    if(fH.att >= 3 || fA.att >= 3) chaosForm += 0.8;
-
-
-
-    let chaosType = 0;
-
-    if(matchType === "derby")     chaosType += 1.4;
-
-    if(matchType === "cup")       chaosType += 1.0;
-
-    if(matchType === "final")     chaosType -= 1.0;
-
-    if(matchType === "friendly")  chaosType += 1.8;
-
-
-
-    const chaosTravel = travelA * 0.7;
-
-    const chaosSched  = (schedH + schedA) * 0.45;
-
-
-
-    let autoChaos = 5 + chaosErr + chaosPress + chaosMom + chaosXG + chaosForm + chaosType + chaosTravel + chaosSched;
-
-    autoChaos = Math.max(1, Math.min(10, autoChaos));
-
-
-
-
-
-    // =============================================================
-
-    // 3) HITUNG IMPORTANCE (AUTO)
-
-    // =============================================================
-
-
-
-    const baseImp = {
-
-        league: 5,
-
-        bigmatch: 7,
-
-        cup: 7,
-
-        knockout: 8,
-
-        final: 9,
-
-        relegation: 9,
-
-        derby: 8,
-
-        friendly: 3
-
-    };
-
-    let autoImp = baseImp[matchType] || 5;
-
-
-
-    const impSt    = ((stH + stA)/2 - 5) * 0.25;
-
-    const clutch   = ((momH + momA)/2 - 5) * 0.20;
-
-    const impInj   = -(injuryH + injuryA) * 0.20;
-
-
-
-    autoImp = autoImp + impSt + clutch + impInj;
-
-    autoImp = Math.max(1, Math.min(10, autoImp));
-
-
-
-
-
-    // =============================================================
-
-    // 4) SMART BLEND dengan input manual (kalau ada)
-
-    // =============================================================
-
-
-
-    // Kalau user sudah isi angka, jangan dibuang total → kita blend
-
-    const oldTempo = PSZ.num("tempo_input", 5);
-
-    const oldChaos = PSZ.num("chaos_input", 5);
-
-    const oldImp   = PSZ.num("importance_input", 5);
-
-
-
-    // 70% auto, 30% manual (supaya kamu masih bisa koreksi sesuai feeling)
-
-    const finalTempo = (autoTempo*0.7 + oldTempo*0.3);
-
-    const finalChaos = (autoChaos*0.7 + oldChaos*0.3);
-
-    const finalImp   = (autoImp*0.7   + oldImp*0.3);
-
-
-
-    PSZ.el("tempo_input").value      = finalTempo.toFixed(1);
-
-    PSZ.el("chaos_input").value      = finalChaos.toFixed(1);
-
-    PSZ.el("importance_input").value = finalImp.toFixed(1);
-
-
-
-    PSZ.log("AUTO TCI v3 RESULT:");
-
-    PSZ.log("Tempo (auto)      : " + autoTempo.toFixed(1) + " → final: " + finalTempo.toFixed(1));
-
-    PSZ.log("Chaos (auto)      : " + autoChaos.toFixed(1) + " → final: " + finalChaos.toFixed(1));
-
-    PSZ.log("Importance (auto) : " + autoImp.toFixed(1)   + " → final: " + finalImp.toFixed(1));
-
-};
-
-
-
-
-
-// =======================================================
-
-// BIND KE TOMBOL (PAKAI YANG SUDAH ADA)
-
-// =======================================================
-
-if(PSZ.el("btnTCI"))      PSZ.el("btnTCI").onclick      = ()=> PSZ.autoTCI();
-
-if(PSZ.el("btnAutoTCI"))  PSZ.el("btnAutoTCI").onclick  = ()=> PSZ.autoTCI();
-
-Z.num("adv_err_away",0.10);
-
-    // Koreksi berdasarkan xGA (pressing tinggi → xGA rendah)
-    ppdaH += (xgaH - 1.2) * 2.5;
-    ppdaA += (xgaA - 1.2) * 2.5;
-
-    // Koreksi error defensif (error tinggi = PPDA naik = pressing buruk)
-    ppdaH += errH * 12;
-    ppdaA += errA * 12;
+    const errA = PSZ.num("adv_err_away",0.10);
+
+    // Koreksi xGA (pressing efektif → xGA lebih rendah)
+    ppdaH += (xgaH - 1.2) * 2.2;
+    ppdaA += (xgaA - 1.2) * 2.2;
+
+    // Koreksi error
+    ppdaH += errH * 11;
+    ppdaA += errA * 11;
 
     ppdaH = Math.max(4, Math.min(20, ppdaH));
     ppdaA = Math.max(4, Math.min(20, ppdaA));
 
-    PSZ.el("adv_ppda_home").value = ppdaH.toFixed(2);
-    PSZ.el("adv_ppda_away").value = ppdaA.toFixed(2);
+    if(PSZ.el("adv_ppda_home")) PSZ.el("adv_ppda_home").value = ppdaH.toFixed(2);
+    if(PSZ.el("adv_ppda_away")) PSZ.el("adv_ppda_away").value = ppdaA.toFixed(2);
 
-    PSZ.state.home_press = ppdaH;
-    PSZ.state.away_press = ppdaA;
+    // simpan pressing impact untuk modul lain
+    PSZ.state.pressH = PSZ.pressImpact(ppdaH);
+    PSZ.state.pressA = PSZ.pressImpact(ppdaA);
 
-    PSZ.log("Auto-PPDA dijalankan.");
+    PSZ.log("Auto PPDA dijalankan.");
 };
 
 
+// ==================================================
+// 5. AUTO MATCH STYLE (opsional, simple helper)
+// ==================================================
+PSZ.autoMatchStyle = function(){
 
+    const matchType = (PSZ.el("match_type")?.value || "league").toLowerCase();
+
+    let styleHome = "possession";
+    let styleAway = "mid_block";
+
+    if(matchType === "friendly"){
+        styleHome = "transition";
+        styleAway = "transition";
+    }else if(matchType === "derby"){
+        styleHome = "high_press";
+        styleAway = "direct";
+    }else if(matchType === "relegation"){
+        styleHome = "low_block";
+        styleAway = "direct";
+    }
+
+    if(PSZ.el("style_home")) PSZ.el("style_home").value = styleHome;
+    if(PSZ.el("style_away")) PSZ.el("style_away").value = styleAway;
+
+    PSZ.log("Auto Match Style di-set: Home="+styleHome+", Away="+styleAway);
+};
+    // ==================================================
+// 6. AUTO TCI v6 – Deep Behavior Match Engine
+// ==================================================
+PSZ.autoTCI = function () {
+
+    PSZ.log("=== AUTO TCI v6 (DBME) ===");
+
+    const ppdaH = PSZ.num("adv_ppda_home", 12);
+    const ppdaA = PSZ.num("adv_ppda_away", 12);
+
+    const pressH = PSZ.state.pressH || 5;
+    const pressA = PSZ.state.pressA || 5;
+
+    const xgH = PSZ.num("adv_xg_home", 1.40);
+    const xgA = PSZ.num("adv_xg_away", 1.40);
+
+    const errH = PSZ.num("adv_err_home", 0.10);
+    const errA = PSZ.num("adv_err_away", 0.10);
+
+    const stH  = PSZ.num("home_st", 5);
+    const stA  = PSZ.num("away_st", 5);
+
+    const flexH = PSZ.num("home_flex", 5);
+    const flexA = PSZ.num("away_flex", 5);
+
+    const momH = PSZ.num("home_mom", 5);
+    const momA = PSZ.num("away_mom", 5);
+
+    const matchType = (PSZ.el("match_type")?.value || "league").toLowerCase();
+
+    const styleH = PSZ.el("style_home")?.value || "";
+    const styleA = PSZ.el("style_away")?.value || "";
+
+    const fH = PSZ.parseFormation(PSZ.el("formation_home")?.value || "");
+    const fA = PSZ.parseFormation(PSZ.el("formation_away")?.value || "");
+
+    const injuryH = PSZ.num("inj_home",0);
+    const injuryA = PSZ.num("inj_away",0);
+    const travelA = PSZ.num("away_travel",0);
+    const schedH  = PSZ.num("sched_home",0);
+    const schedA  = PSZ.num("sched_away",0);
+
+    const avgPress = (pressH + pressA) / 2;
+    const invPPDA  = ((12 - ppdaH) + (12 - ppdaA)) / 2;
+    const sumXG    = xgH + xgA;
+    const sumErr   = errH + errA;
+    const avgSt    = (stH + stA) / 2;
+    const avgFlex  = (flexH + flexA) / 2;
+    const avgMom   = (momH + momA) / 2;
+    const gapMom   = Math.abs(momH - momA);
+
+    // STYLE INTERACTION MATRIX
+    const styleKey = (s1,s2)=> `${s1}:${s2}`;
+    const styleMatrix = {
+        [styleKey("high_press","direct")]    : +1.6,
+        [styleKey("direct","high_press")]    : +1.6,
+        [styleKey("possession","low_block")] : -1.1,
+        [styleKey("low_block","possession")] : -1.1,
+        [styleKey("possession","high_press")]: +0.9,
+        [styleKey("transition","high_press")]: +1.2,
+        [styleKey("transition","direct")]    : +0.9
+    };
+    const key1 = styleKey(styleH || "unknown", styleA || "unknown");
+    const styleImpact = styleMatrix[key1] ?? 0;
+
+    // PHASE (buildup / midflow / chaos)
+    let phase = "midflow";
+    if (invPPDA <= 5 && avgPress <= 4 && sumXG <= 2.4) {
+        phase = "buildup";
+    } else if (invPPDA >= 8 && avgPress >= 6) {
+        phase = "chaos";
+    } else if (sumErr >= 0.22 || styleImpact > 1.0) {
+        phase = "chaos";
+    }
+
+    const phaseTempoAdj =
+        phase === "buildup" ? -1.3 :
+        phase === "chaos"   ? +1.4 : 0;
+
+    const phaseChaosAdj =
+        phase === "buildup" ? -1.7 :
+        phase === "chaos"   ? +2.0 : 0;
+
+    // BASE TEMPO & CHAOS
+    let baseTempo = 5;
+    let baseChaos = 5;
+
+    baseTempo += invPPDA * 0.35;
+    baseTempo += avgPress * 0.25;
+    baseTempo += (sumXG - 2.5) * 0.55;
+    baseTempo += styleImpact * 0.7;
+    baseTempo += phaseTempoAdj;
+
+    baseChaos += sumErr * 20;
+    baseChaos += (avgPress - 5) * 0.35;
+    baseChaos += gapMom * 0.30;
+    baseChaos += styleImpact;
+    baseChaos += phaseChaosAdj;
+
+    if (pressH >= 7 && pressA >= 7) {
+        baseChaos += 2.0;
+        baseTempo  += 0.6;
+    }
+
+    baseChaos -= (avgSt - 5) * 0.4;
+
+    if (matchType === "final") {
+        baseTempo -= 0.7;
+        baseChaos -= 0.8;
+    }
+    if (matchType === "friendly") {
+        baseTempo -= 1.6;
+        baseChaos += 0.8;
+    }
+    if (matchType === "derby") {
+        baseChaos += 1.0;
+    }
+
+    function clamp01(x){ return Math.max(1, Math.min(10, x)); }
+
+    baseTempo = clamp01(baseTempo);
+    baseChaos = clamp01(baseChaos);
+
+    // PHASE EARLY / MID / LATE
+    let tempoEarly = baseTempo;
+    let tempoMid   = baseTempo;
+    let tempoLate  = baseTempo;
+
+    let chaosEarly = baseChaos;
+    let chaosMid   = baseChaos;
+    let chaosLate  = baseChaos;
+
+    if (matchType === "final" || matchType === "cup" || matchType === "knockout") {
+        tempoEarly -= 0.8;
+        chaosEarly -= 1.0;
+
+        tempoMid   += 0.2;
+        chaosMid   += 0.3;
+
+        tempoLate  += 0.5;
+        chaosLate  += 0.7;
+    }
+
+    if (matchType === "derby" || (matchType === "league" && invPPDA >= 8)) {
+        tempoEarly += 0.7;
+        chaosEarly += 0.8;
+        tempoLate  -= 0.4;
+        chaosLate  -= 0.3;
+    }
+
+    if (avgSt >= 7 && avgFlex <= 4) {
+        tempoEarly -= 0.4;
+        tempoMid   -= 0.4;
+        tempoLate  -= 0.4;
+
+        chaosEarly -= 0.6;
+        chaosMid   -= 0.6;
+        chaosLate  -= 0.6;
+    }
+
+    const schedTotal = schedH + schedA + travelA;
+    if (schedTotal >= 3) {
+        tempoLate  -= 0.5;
+        chaosLate  -= 0.3;
+    }
+
+    tempoEarly = clamp01(tempoEarly);
+    tempoMid   = clamp01(tempoMid);
+    tempoLate  = clamp01(tempoLate);
+
+    chaosEarly = clamp01(chaosEarly);
+    chaosMid   = clamp01(chaosMid);
+    chaosLate  = clamp01(chaosLate);
+
+    // IMPORTANCE
+    const baseImpMap = {
+        league: 5, bigmatch: 7, cup: 7,
+        knockout: 8, final: 9, relegation: 9,
+        derby: 8, friendly: 3
+    };
+    let imp = baseImpMap[matchType] || 5;
+    imp += (avgSt - 5) * 0.15;
+    imp += (avgMom - 5) * 0.15;
+    imp -= (injuryH + injuryA) * 0.15;
+    imp  = Math.max(1, Math.min(10, imp));
+
+    // BLEND dengan input manual (85:15)
+    const manTempo = PSZ.num("tempo_input", 5);
+    const manChaos = PSZ.num("chaos_input", 5);
+    const manImp   = PSZ.num("importance_input", 5);
+
+    const globalTempo = 0.85 * baseTempo + 0.15 * manTempo;
+    const globalChaos = 0.85 * baseChaos + 0.15 * manChaos;
+    const globalImp   = 0.85 * imp       + 0.15 * manImp;
+
+    if(PSZ.el("tempo_input"))      PSZ.el("tempo_input").value      = globalTempo.toFixed(1);
+    if(PSZ.el("chaos_input"))      PSZ.el("chaos_input").value      = globalChaos.toFixed(1);
+    if(PSZ.el("importance_input")) PSZ.el("importance_input").value = globalImp.toFixed(1);
+
+    // simpan profile untuk dipakai engine lain
+    PSZ.state.tci_profile = {
+        phase,
+        tempo:  { early: tempoEarly, mid: tempoMid, late: tempoLate, global: globalTempo },
+        chaos:  { early: chaosEarly, mid: chaosMid, late: chaosLate, global: globalChaos },
+        importance: globalImp
+    };
+
+    PSZ.log("=== TCI v6 RESULT ===");
+    PSZ.log("Phase : " + phase);
+    PSZ.log("Tempo  E/M/L : " +
+        tempoEarly.toFixed(1) + " / " +
+        tempoMid.toFixed(1)   + " / " +
+        tempoLate.toFixed(1));
+    PSZ.log("Chaos  E/M/L : " +
+        chaosEarly.toFixed(1) + " / " +
+        chaosMid.toFixed(1)   + " / " +
+        chaosLate.toFixed(1));
+    PSZ.log("Importance : " + globalImp.toFixed(1));
+};
+
+
+// ==================================================
+// 7. BIND TOMBOL PART 1
+// ==================================================
+if(PSZ.el("btnValidate"))   PSZ.el("btnValidate").onclick   = ()=> PSZ.validateInput();
+if(PSZ.el("btnAutoPPDA"))   PSZ.el("btnAutoPPDA").onclick   = ()=> PSZ.autoPPDA();
+if(PSZ.el("btnPressing"))   PSZ.el("btnPressing").onclick   = ()=> PSZ.autoPPDA();
+if(PSZ.el("btnMatchStyle")) PSZ.el("btnMatchStyle").onclick = ()=> PSZ.autoMatchStyle();
+if(PSZ.el("btnTCI"))        PSZ.el("btnTCI").onclick        = ()=> PSZ.autoTCI();
+if(PSZ.el("btnAutoTCI"))    PSZ.el("btnAutoTCI").onclick    = ()=> PSZ.autoTCI();
+
+PSZ.log("PART 1 PREMIUM Loaded: Helper + AutoPPDA + AutoMatchStyle + TCI v6 OK.");
 
 </script>
 <!-- ============================================
