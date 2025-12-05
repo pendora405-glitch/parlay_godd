@@ -1965,15 +1965,37 @@ if (PSZ.el("btnSwing"))  PSZ.el("btnSwing").onclick  = () => PSZ.swingReality();
 if (PSZ.el("btnHybrid")) PSZ.el("btnHybrid").onclick = () => PSZ.hybridEngine();
 
 </script>
-  <!-- ============================================
-PART 5 — INFINITY ENGINE (Monte Carlo + G.U.N)
+ <!-- ============================================
+PART 5 — INFINITY ENGINE v2
+(Dynamic Monte Carlo + G.U.N v2)
 =============================================== -->
 <script>
 
 // ======================================================================
-// 1. MONTE CARLO SIMULATOR (10.000 iterasi default)
+// 1. MONTE CARLO v2 — ITERASI DINAMIS
+//    - Iterasi ditentukan dari λ & chaos (TCI)
+//    - Tetap cepat di HP, tapi cukup dalam untuk akurasi
 // ======================================================================
-PSZ.monteCarlo = function(lambdaH, lambdaA, iterations = 10000) {
+PSZ.monteCarlo = function(lambdaH, lambdaA, opts) {
+
+    opts = opts || {};
+    let iterations = opts.iterations || 10000;
+
+    const tci = PSZ.state.tci_profile || {
+        tempo:{global:5},
+        chaos:{global:5},
+        importance:5
+    };
+
+    const chaos = tci.chaos.global;
+    const tempo = tci.tempo.global;
+
+    // Dinamis: chaos tinggi → tambah iterasi sedikit
+    const chaosFactor = 1 + (chaos - 5) * 0.05;
+    const tempoFactor = 1 + (tempo - 5) * 0.03;
+
+    iterations = Math.round(iterations * chaosFactor * tempoFactor);
+    iterations = Math.max(4000, Math.min(20000, iterations)); // jaga agar tetap ringan
 
     let hWin = 0, aWin = 0, drw = 0;
     let over25 = 0, under25 = 0;
@@ -2001,6 +2023,7 @@ PSZ.monteCarlo = function(lambdaH, lambdaA, iterations = 10000) {
     }
 
     return {
+        iterations,
         home:  hWin / iterations,
         draw:  drw  / iterations,
         away:  aWin / iterations,
@@ -2011,43 +2034,61 @@ PSZ.monteCarlo = function(lambdaH, lambdaA, iterations = 10000) {
 
 
 // ======================================================================
-// 2. G.U.N — GRAND UNIFIED NUMBERS
-// ======================================================================
-//
-// Menggabungkan semua engine menjadi angka indeks final untuk:
-// • Side Gap (kekuatan relatif tim)
-// • Goal Bias (potensi gol tinggi / rendah)
-// • Drawness (probabilitas imbang realistik)
-//
+// 2. G.U.N v2 — GRAND UNIFIED NUMBERS v2
+//    - SideGap Index
+//    - GoalBias Index
+//    - Drawness Index
+//    - Chaos Context Index
 // ======================================================================
 PSZ.gun = function (λH, λA, hybrid, mc) {
 
-    const sg = Math.max(1, Math.min(10, ((λH - λA) * 3 + 5)));   // side gap index
-    const gb = Math.max(1, Math.min(10, ((hybrid.ou25.over - hybrid.ou25.under) * 8 + 5))); // goal bias
-    const dr = Math.max(1, Math.min(10, (hybrid.oneXtwo.draw * 25))); // drawness index
+    const gap = λH - λA;
 
-    return {sidegap: sg, goalbias: gb, drawness: dr};
+    // SideGap: 1–10 seberapa beda kekuatan
+    let sidegap = 5 + gap * 3.0;
+    sidegap = Math.max(1, Math.min(10, sidegap));
+
+    // GoalBias: dari hybrid OU 2.5 + MC OU 2.5
+    const hb = (hybrid.ou25.over + mc.over) / 2;
+    let goalbias = 5 + (hb - 0.5) * 10;
+    goalbias = Math.max(1, Math.min(10, goalbias));
+
+    // Drawness: rata-rata prime/hybrid/MC draw (kalau nanti mau dipakai)
+    const dr = hybrid.oneXtwo.draw;
+    let drawness = dr * 30;
+    drawness = Math.max(1, Math.min(10, drawness));
+
+    // Chaos Context: gabungan chaos TCI + selisih OU
+    const tci = PSZ.state.tci_profile || {chaos:{global:5}};
+    let chaosCtx = 5 + (tci.chaos.global - 5) * 0.6 + (hb - 0.5) * 6;
+    chaosCtx = Math.max(1, Math.min(10, chaosCtx));
+
+    return {
+        sidegap,
+        goalbias,
+        drawness,
+        chaosCtx
+    };
 };
 
 
 // ======================================================================
-// 3. INFINITY ENGINE
-//    (Blend Prime + Hybrid + Monte Carlo + GUN)
+// 3. INFINITY ENGINE v2
+//    Blend: Prime vNext + Hybrid v2 + Monte Carlo v2 + GUN v2
 // ======================================================================
 PSZ.infinityEngine = function () {
 
-    PSZ.log("=== INFINITY ENGINE START ===");
+    PSZ.log("=== INFINITY ENGINE v2 START ===");
 
-    // Pastikan Prime & Hybrid sudah dihitung
-    const prime = PSZ.state.prime;
+    const prime  = PSZ.state.prime;
+    const hybrid = PSZ.state.hybrid;
+
     if (!prime) {
-        PSZ.log("Prime belum dihitung — jalankan Prime Engine.");
+        PSZ.log("Prime belum dihitung — jalankan PRIME ENGINE dulu.");
         return;
     }
-
-    const hybrid = PSZ.state.hybrid;
     if (!hybrid) {
-        PSZ.log("Hybrid belum dihitung — jalankan Hybrid Engine.");
+        PSZ.log("Hybrid belum dihitung — jalankan HYBRID ENGINE dulu.");
         return;
     }
 
@@ -2055,73 +2096,84 @@ PSZ.infinityEngine = function () {
     const λA = hybrid.lambda_away;
 
     // -------------------------------
-    // Monte Carlo Simulation
+    // Monte Carlo v2
     // -------------------------------
-    const mc = PSZ.monteCarlo(λH, λA, 10000);
+    const mc = PSZ.monteCarlo(λH, λA, {iterations: 9000});
 
     // -------------------------------
-    // Infinity Blend Formula
+    // Infinity Blend v2
+    // Prime vNext + Hybrid v2 + MC v2
     // -------------------------------
     const infHome =
-        prime.oneXtwo.home   * 0.25 +
-        hybrid.oneXtwo.home * 0.35 +
-        mc.home             * 0.40;
+        prime.oneXtwo.home   * 0.22 +
+        hybrid.oneXtwo.home * 0.33 +
+        mc.home             * 0.45;
 
     const infDraw =
-        prime.oneXtwo.draw   * 0.25 +
-        hybrid.oneXtwo.draw * 0.35 +
-        mc.draw             * 0.40;
+        prime.oneXtwo.draw   * 0.22 +
+        hybrid.oneXtwo.draw * 0.33 +
+        mc.draw             * 0.45;
 
     const infAway =
-        prime.oneXtwo.away   * 0.25 +
-        hybrid.oneXtwo.away * 0.35 +
-        mc.away             * 0.40;
+        prime.oneXtwo.away   * 0.22 +
+        hybrid.oneXtwo.away * 0.33 +
+        mc.away             * 0.45;
 
     const infOver =
-        prime.ou25.over   * 0.20 +
+        prime.ou25.over   * 0.18 +
         hybrid.ou25.over * 0.30 +
-        mc.over           * 0.50;
+        mc.over           * 0.52;
 
     const infUnder =
-        prime.ou25.under   * 0.20 +
+        prime.ou25.under   * 0.18 +
         hybrid.ou25.under * 0.30 +
-        mc.under           * 0.50;
+        mc.under           * 0.52;
+
+    // Normalisasi ringan supaya 1X2 tidak lewat batas
+    const total1x2 = infHome + infDraw + infAway;
+    const nh = infHome  / total1x2;
+    const nd = infDraw  / total1x2;
+    const na = infAway  / total1x2;
 
     // -------------------------------
-    // GUN Model
+    // GUN v2
     // -------------------------------
     const gun = PSZ.gun(λH, λA, hybrid, mc);
 
     // -------------------------------
-    // Simpan hasil
+    // Simpan hasil ke state
     // -------------------------------
     PSZ.state.infinity = {
-        oneXtwo: {home: infHome, draw: infDraw, away: infAway},
+        oneXtwo: {home: nh, draw: nd, away: na},
         ou25:    {over: infOver, under: infUnder},
         mc,
         gun
     };
 
     // -------------------------------
-    // Output Log
+    // Output log
     // -------------------------------
-    PSZ.log("Infinity Predictions:");
-    PSZ.log("Home : " + (infHome * 100).toFixed(2) + "%");
-    PSZ.log("Draw : " + (infDraw * 100).toFixed(2) + "%");
-    PSZ.log("Away : " + (infAway * 100).toFixed(2) + "%");
+    PSZ.log("Infinity v2 1X2:");
+    PSZ.log("Home : " + (nh*100).toFixed(2) + "%");
+    PSZ.log("Draw : " + (nd*100).toFixed(2) + "%");
+    PSZ.log("Away : " + (na*100).toFixed(2) + "%");
 
-    PSZ.log("O/U 2.5 → Over " + (infOver*100).toFixed(2) + "% | Under " + (infUnder*100).toFixed(2) + "%");
+    PSZ.log("Infinity v2 O/U 2.5 → Over " +
+        (infOver*100).toFixed(2) + "% | Under " +
+        (infUnder*100).toFixed(2) + "%");
 
-    PSZ.log("GUN → SideGap: " + gun.sidegap.toFixed(2) +
+    PSZ.log("Monte Carlo v2 iterations : " + mc.iterations);
+    PSZ.log("G.U.N v2 → SideGap: " + gun.sidegap.toFixed(2) +
             " | GoalBias: " + gun.goalbias.toFixed(2) +
-            " | Drawness: " + gun.drawness.toFixed(2));
+            " | Drawness: " + gun.drawness.toFixed(2) +
+            " | ChaosCtx: " + gun.chaosCtx.toFixed(2));
 
-    PSZ.log("=== INFINITY ENGINE END ===\n");
+    PSZ.log("=== INFINITY ENGINE v2 END ===\n");
 };
 
 
 // ======================================================================
-// 4. TOMBOL INFINITY
+// 4. TOMBOL INFINITY (tidak diubah, hanya dipastikan terhubung)
 // ======================================================================
 if (PSZ.el("btnInfinity"))
     PSZ.el("btnInfinity").onclick = () => PSZ.infinityEngine();
@@ -2129,25 +2181,28 @@ if (PSZ.el("btnInfinity"))
 if (PSZ.el("btnGUN"))
     PSZ.el("btnGUN").onclick = () => PSZ.infinityEngine();
 
-</script>
-  <!-- ============================================
-PART 6 — ANALYTICS ENGINE (Difficulty, Flow, Trend, Set Piece, BRM)
+</script> 
+<!-- ============================================
+PART 6 — ANALYTICS SUITE v2
+(Difficulty v3, Flow v2, Trend v2, SetPiece v2, BRM v2)
 =============================================== -->
 <script>
 
+// helper clamp
+function PSZ_clamp01(x){ return Math.max(1, Math.min(10, x)); }
+
 // ======================================================================
-// 1. MATCH DIFFICULTY INDEX
+// 1. MATCH DIFFICULTY v3
+//    Mengukur seberapa sulit match untuk diprediksi / dimainkan
+//    Gabungan: gap λ, TCI, Infinity, SideGap, Drawness
 // ======================================================================
 PSZ.matchDifficulty = function () {
 
-    PSZ.log("=== MATCH DIFFICULTY ENGINE START ===");
+    PSZ.log("=== MATCH DIFFICULTY v3 START ===");
 
-    const stH   = PSZ.num("home_st",5);
-    const stA   = PSZ.num("away_st",5);
-    const flexH = PSZ.num("home_flex",5);
-    const flexA = PSZ.num("away_flex",5);
-    const momH  = PSZ.num("home_mom",5);
-    const momA  = PSZ.num("away_mom",5);
+    const lam = PSZ.state || {};
+    const λH  = PSZ.state.lambda_home ?? 1.4;
+    const λA  = PSZ.state.lambda_away ?? 1.2;
 
     const tci = PSZ.state.tci_profile || {
         tempo:{global:5},
@@ -2155,159 +2210,234 @@ PSZ.matchDifficulty = function () {
         importance:5
     };
 
-    const dif =
-        Math.abs(stH - stA) * 0.8 +
-        Math.abs(flexH - flexA) * 0.7 +
-        Math.abs(momH - momA) * 0.6 +
-        Math.abs(tci.tempo.global - 5) * 0.4 +
-        Math.abs(tci.chaos.global - 5) * 0.4 +
-        Math.abs(tci.importance - 5) * 0.4;
+    const inf = PSZ.state.infinity || null;
+    const gun = inf?.gun || null;
 
-    const difficulty = Math.max(1, Math.min(10, dif + 3));
+    const tempo = tci.tempo.global;
+    const chaos = tci.chaos.global;
+    const imp   = tci.importance;
+
+    const gapλ  = Math.abs(λH - λA);
+
+    // basic difficulty: semakin kecil gap → semakin sulit
+    let base = 7 - gapλ * 3;
+
+    // chaos tinggi → susah ditebak
+    base += (chaos - 5) * 0.6;
+
+    // importance tinggi → tekanan tinggi, bisa bikin unpredictability
+    base += (imp - 5) * 0.3;
+
+    // jika ada GUN v2
+    if (gun) {
+        base += (gun.drawness - 5) * 0.35;
+        base += (gun.chaosCtx - 5) * 0.30;
+    }
+
+    let difficulty = PSZ_clamp01(base);
 
     PSZ.state.difficulty = difficulty;
 
-    PSZ.log("Match Difficulty Index : " + difficulty.toFixed(2));
-    PSZ.log("=== MATCH DIFFICULTY END ===\n");
+    PSZ.log("Match Difficulty v3 : " + difficulty.toFixed(2));
+    PSZ.log("=== MATCH DIFFICULTY v3 END ===\n");
 
     return difficulty;
 };
 
 
 // ======================================================================
-// 2. MATCH FLOW ENGINE (Momentum + Tempo + Chaos)
+// 2. MATCH FLOW v2
+//    Siapa yang lebih menguasai alur pertandingan?
+//    Gabungan: Momentum, Tempo, λ, xT-lite bila ada
 // ======================================================================
 PSZ.matchFlow = function () {
 
-    PSZ.log("=== MATCH FLOW ENGINE START ===");
+    PSZ.log("=== MATCH FLOW v2 START ===");
 
     const momH = PSZ.num("home_mom",5);
     const momA = PSZ.num("away_mom",5);
 
     const tci = PSZ.state.tci_profile || {
         tempo:{global:5},
-        chaos:{global:5},
-        importance:5
+        chaos:{global:5}
     };
 
-    let fh = momH * 0.45 + tci.tempo.global * 0.30 - tci.chaos.global * 0.10;
-    let fa = momA * 0.45 + tci.tempo.global * 0.30 - tci.chaos.global * 0.10;
+    const λH  = PSZ.state.lambda_home ?? 1.4;
+    const λA  = PSZ.state.lambda_away ?? 1.2;
 
-    function clamp(x){ return Math.max(1, Math.min(10,x)); }
-    fh = clamp(fh);
-    fa = clamp(fa);
+    const xt  = PSZ.state.xtlite || {home:10, away:10};
 
-    PSZ.state.flow = {home: fh, away: fa};
+    let fH = 0;
+    let fA = 0;
 
-    PSZ.log("Flow Home : " + fh.toFixed(2));
-    PSZ.log("Flow Away : " + fa.toFixed(2));
-    PSZ.log("=== MATCH FLOW END ===\n");
+    // home flow
+    fH += momH * 0.45;
+    fH += tci.tempo.global * 0.30;
+    fH += (λH - λA) * 1.2;
+    fH += (xt.home - xt.away) * 0.10;
+
+    // away flow
+    fA += momA * 0.45;
+    fA += tci.tempo.global * 0.30;
+    fA += (λA - λH) * 1.2;
+    fA += (xt.away - xt.home) * 0.10;
+
+    fH = PSZ_clamp01(fH);
+    fA = PSZ_clamp01(fA);
+
+    PSZ.state.flow = {home: fH, away: fA};
+
+    PSZ.log("Flow v2 Home : " + fH.toFixed(2));
+    PSZ.log("Flow v2 Away : " + fA.toFixed(2));
+    PSZ.log("=== MATCH FLOW v2 END ===\n");
 
     return PSZ.state.flow;
 };
 
 
 // ======================================================================
-// 3. TREND ENGINE (Form Stability + Momentum Swing)
+// 3. TREND ENGINE v2
+//    Mengukur kecenderungan jangka pendek & menengah:
+//    stability + momentum + Infinity bias
 // ======================================================================
 PSZ.trendEngine = function () {
 
-    PSZ.log("=== TREND ENGINE START ===");
+    PSZ.log("=== TREND ENGINE v2 START ===");
 
-    const stH   = PSZ.num("home_st",5);
-    const stA   = PSZ.num("away_st",5);
-    const momH  = PSZ.num("home_mom",5);
-    const momA  = PSZ.num("away_mom",5);
+    const stH  = PSZ.num("home_st",5);
+    const stA  = PSZ.num("away_st",5);
+    const momH = PSZ.num("home_mom",5);
+    const momA = PSZ.num("away_mom",5);
 
-    let trH = (stH * 0.6 + momH * 0.4);
-    let trA = (stA * 0.6 + momA * 0.4);
+    const inf  = PSZ.state.infinity || null;
 
-    function clamp(x){ return Math.max(1, Math.min(10,x)); }
-    trH = clamp(trH);
-    trA = clamp(trA);
+    let trH = stH * 0.55 + momH * 0.45;
+    let trA = stA * 0.55 + momA * 0.45;
+
+    if (inf) {
+        // tim yang lebih sering difavoritkan Infinity → trend sedikit naik
+        trH += (inf.oneXtwo.home - 0.33) * 4;
+        trA += (inf.oneXtwo.away - 0.33) * 4;
+    }
+
+    trH = PSZ_clamp01(trH);
+    trA = PSZ_clamp01(trA);
 
     PSZ.state.trend = {home: trH, away: trA};
 
-    PSZ.log("Trend Home : " + trH.toFixed(2));
-    PSZ.log("Trend Away : " + trA.toFixed(2));
-    PSZ.log("=== TREND ENGINE END ===\n");
+    PSZ.log("Trend v2 Home : " + trH.toFixed(2));
+    PSZ.log("Trend v2 Away : " + trA.toFixed(2));
+    PSZ.log("=== TREND ENGINE v2 END ===\n");
 
     return PSZ.state.trend;
 };
 
 
 // ======================================================================
-// 4. SET PIECE ENGINE (Stit + Error + Flex)
+// 4. SET PIECE ENGINE v2
+//    Menghitung potensi gol dari bola mati:
+//    - Error defensif
+//    - xG
+//    - Flexibility
 // ======================================================================
 PSZ.setPiece = function () {
 
-    PSZ.log("=== SET PIECE ENGINE START ===");
+    PSZ.log("=== SET PIECE ENGINE v2 START ===");
 
-    const errH  = PSZ.num("adv_err_home",0.1);
-    const errA  = PSZ.num("adv_err_away",0.1);
+    const errH  = PSZ.num("adv_err_home",0.10);
+    const errA  = PSZ.num("adv_err_away",0.10);
     const flexH = PSZ.num("home_flex",5);
     const flexA = PSZ.num("away_flex",5);
+    const xgH   = PSZ.num("adv_xg_home",1.4);
+    const xgA   = PSZ.num("adv_xg_away",1.4);
 
-    const spH = Math.max(1, Math.min(10, 5 + errA * 10 + (flexH - 5) * 0.4));
-    const spA = Math.max(1, Math.min(10, 5 + errH * 10 + (flexA - 5) * 0.4));
+    // Home Set Piece Index
+    let spH = 5;
+    spH += errA * 9.0;
+    spH += (flexH - 5) * 0.4;
+    spH += (xgH - 1.3) * 1.2;
+
+    // Away Set Piece Index
+    let spA = 5;
+    spA += errH * 9.0;
+    spA += (flexA - 5) * 0.4;
+    spA += (xgA - 1.3) * 1.2;
+
+    spH = PSZ_clamp01(spH);
+    spA = PSZ_clamp01(spA);
 
     PSZ.state.setpiece = {home: spH, away: spA};
 
-    PSZ.log("Set Piece Home : " + spH.toFixed(2));
-    PSZ.log("Set Piece Away : " + spA.toFixed(2));
-    PSZ.log("=== SET PIECE ENGINE END ===\n");
+    PSZ.log("SetPiece v2 Home : " + spH.toFixed(2));
+    PSZ.log("SetPiece v2 Away : " + spA.toFixed(2));
+    PSZ.log("=== SET PIECE ENGINE v2 END ===\n");
 
     return PSZ.state.setpiece;
 };
 
 
 // ======================================================================
-// 5. BRM — BANKROLL MANAGEMENT (Safe Betting Assist)
+// 5. BRM v2 — BANKROLL MANAGEMENT & RISK
+//    Menggunakan Infinity v2 + Difficulty v3 + GUN v2
+//    Output: risk index + advice ringkas
 // ======================================================================
 PSZ.brmEngine = function () {
 
-    PSZ.log("=== BRM ENGINE START ===");
+    PSZ.log("=== BRM ENGINE v2 START ===");
 
-    const infinity = PSZ.state.infinity;
-    if (!infinity) {
-        PSZ.log("Infinity belum dihitung — jalankan Infinity Engine.");
+    const inf = PSZ.state.infinity;
+    if (!inf) {
+        PSZ.log("Infinity belum dihitung — jalankan INFINITY ENGINE dulu.");
         return;
     }
 
-    // 1X2 probability
-    const ph = infinity.oneXtwo.home;
-    const pd = infinity.oneXtwo.draw;
-    const pa = infinity.oneXtwo.away;
+    // panggil difficulty v3 jika belum ada
+    let diff = PSZ.state.difficulty;
+    if (!diff) diff = PSZ.matchDifficulty();
 
-    // risiko dasar (1 = aman, 10 = sangat berisiko)
+    const gun = inf.gun || {sidegap:5, goalbias:5, drawness:5, chaosCtx:5};
+
+    const ph = inf.oneXtwo.home;
+    const pd = inf.oneXtwo.draw;
+    const pa = inf.oneXtwo.away;
+
+    const o  = inf.ou25.over;
+    const u  = inf.ou25.under;
+
+    // risk base dari keseimbangan 1X2
     let risk =
-        Math.abs(ph - pa) * 6 +
-        Math.abs((ph + pa) - pd) * 8;
+        Math.abs(ph - pa) * 5 +          // kalau mirip → lebih sulit
+        Math.abs((ph+pa) - pd) * 6 +     // draw tinggi → tambah sulit
+        (diff - 5) * 0.8 +               // difficulty contextual
+        (gun.chaosCtx - 5) * 0.7;        // chaos context
 
-    risk = Math.max(1, Math.min(10, risk));
+    risk = PSZ_clamp01(risk);
 
-    let suggestion = "";
+    let advice = "";
 
     if (risk <= 3) {
-        suggestion = "Low Risk → Aman untuk ML / OU ringan.";
+        advice = "Low Risk → Boleh ML / OU dengan stake normal.";
     } else if (risk <= 6) {
-        suggestion = "Mid Risk → Hindari ML favorit, fokus OU.";
+        advice = "Mid Risk → Hindari ML berat, fokus OU / line aman dengan stake kecil-menengah.";
     } else {
-        suggestion = "High Risk → Hanya small-stake atau skip.";
+        advice = "High Risk → Disarankan small stake saja atau skip.";
     }
 
-    PSZ.state.brm = {risk, suggestion};
+    PSZ.state.brm = {
+        risk,
+        advice
+    };
 
-    PSZ.log("BRM Risk Level : " + risk.toFixed(2));
-    PSZ.log("BRM Advice    : " + suggestion);
-    PSZ.log("=== BRM ENGINE END ===\n");
+    PSZ.log("BRM v2 Risk Index : " + risk.toFixed(2));
+    PSZ.log("BRM v2 Advice     : " + advice);
+    PSZ.log("=== BRM ENGINE v2 END ===\n");
 
     return PSZ.state.brm;
 };
 
 
 // ======================================================================
-// 6. BIND TOMBOL PART 6
+// 6. BIND TOMBOL PART 6 (TIDAK DIUBAH NAMANYA)
 // ======================================================================
 if (PSZ.el("btnDifficulty"))
     PSZ.el("btnDifficulty").onclick = () => PSZ.matchDifficulty();
@@ -2324,232 +2454,214 @@ if (PSZ.el("btnSetPiece"))
 if (PSZ.el("btnBRM"))
     PSZ.el("btnBRM").onclick = () => PSZ.brmEngine();
 
-
-PSZ.log("PART 6 Loaded: Difficulty + Flow + Trend + SetPiece + BRM");
+PSZ.log("PART 6 v2 Loaded: Difficulty v3 + Flow v2 + Trend v2 + SetPiece v2 + BRM v2.");
 
 </script>
-<!-- ============================================
-PART 7 — PRO MODULES (DIM, TCA, PIM, xT-lite)
+    <!-- ============================================
+PART 7 — ADVANCED CONTEXT ENGINE v2
+(DIM v2 + TCA v2 + PIM v2 + xT-lite v2)
 =============================================== -->
 <script>
 
+function PSZ_c10(x){ return Math.max(1, Math.min(10, x)); }
+
 // ======================================================================
-// 1. DIM — DEFENSIVE INTEGRITY MODEL
+// 1. DIM v2 — Defensive Impact Model
+//    Mengukur seberapa kuat/rapuh pertahanan berdasarkan:
+//    - xGA
+//    - Error defensif
+//    - Pressing (PPDA/gaya pressing)
+//    - Stability
 // ======================================================================
-PSZ.dimEngine = function () {
+PSZ.DIM = function () {
 
-    PSZ.log("=== DIM ENGINE START ===");
+    PSZ.log("=== DIM v2 START ===");
 
-    const ppdaH = PSZ.num("adv_ppda_home", 12);
-    const ppdaA = PSZ.num("adv_ppda_away", 12);
+    const xgaH = PSZ.num("adv_xga_home", 1.30);
+    const xgaA = PSZ.num("adv_xga_away", 1.30);
 
-    const xgaH  = PSZ.num("adv_xga_home", 1.30);
-    const xgaA  = PSZ.num("adv_xga_away", 1.30);
+    const errH = PSZ.num("adv_err_home", 0.10);
+    const errA = PSZ.num("adv_err_away", 0.10);
 
-    const errH  = PSZ.num("adv_err_home", 0.10);
-    const errA  = PSZ.num("adv_err_away", 0.10);
+    const stH  = PSZ.num("home_st", 5);
+    const stA  = PSZ.num("away_st", 5);
 
-    const stH   = PSZ.num("home_st", 5);
-    const stA   = PSZ.num("away_st", 5);
+    const pressH = PSZ.state.pressH || 5;
+    const pressA = PSZ.state.pressA || 5;
 
-    const fH = PSZ.parseFormation(PSZ.el("formation_home")?.value || "");
-    const fA = PSZ.parseFormation(PSZ.el("formation_away")?.value || "");
+    // Home defensive rating
+    let dH = 5;
+    dH -= (xgaH - 1.2) * 3.0;
+    dH -= errH * 8.0;
+    dH += (stH - 5) * 0.6;
+    dH += (pressH - 5) * 0.35;
 
-    // Semakin kecil skor, semakin rapuh; semakin besar = semakin kuat
-    function calcDIM(ppda, xga, err, st, form) {
-        let base = 5;
+    // Away defensive rating
+    let dA = 5;
+    dA -= (xgaA - 1.2) * 3.0;
+    dA -= errA * 8.0;
+    dA += (stA - 5) * 0.6;
+    dA += (pressA - 5) * 0.35;
 
-        // PPDA tinggi (passive) → minus, PPDA rendah (agresif) → plus
-        base += (12 - ppda) * 0.25;
+    dH = PSZ_c10(dH);
+    dA = PSZ_c10(dA);
 
-        // xGA besar → minus
-        base -= (xga - 1.1) * 3.0;
+    PSZ.state.dim = {home: dH, away: dA};
 
-        // error besar → minus
-        base -= err * 15;
-
-        // stability → plus
-        base += (st - 5) * 0.5;
-
-        // formasi dengan 5 bek → plus
-        if (form.def >= 5) base += 0.8;
-        if (form.def <= 3) base -= 0.6;
-
-        return Math.max(1, Math.min(10, base));
-    }
-
-    const dimH = calcDIM(ppdaH, xgaH, errH, stH, fH);
-    const dimA = calcDIM(ppdaA, xgaA, errA, stA, fA);
-
-    PSZ.state.dim = {home: dimH, away: dimA};
-
-    PSZ.log("DIM Home : " + dimH.toFixed(2));
-    PSZ.log("DIM Away : " + dimA.toFixed(2));
-    PSZ.log("=== DIM ENGINE END ===\n");
+    PSZ.log("DIM v2 Home : " + dH.toFixed(2));
+    PSZ.log("DIM v2 Away : " + dA.toFixed(2));
+    PSZ.log("=== DIM v2 END ===\n");
 
     return PSZ.state.dim;
 };
 
 
 // ======================================================================
-// 2. TCA — TACTICAL CLASH ANALYZER
-//     Analisis benturan taktik: gaya bermain + formasi + match type
+// 2. TCA v2 — Tactical Compatibility Analysis
+//    Menilai “siapa taktik yang menang” berdasarkan:
+//    - Style matchup (direct vs low block, high press vs build-up dsb.)
+//    - Flexibility
+//    - Momentum
 // ======================================================================
-PSZ.tcaEngine = function () {
+PSZ.TCA = function () {
 
-    PSZ.log("=== TCA ENGINE START ===");
+    PSZ.log("=== TCA v2 START ===");
 
-    const styleH = PSZ.el("style_home")?.value || "";
-    const styleA = PSZ.el("style_away")?.value || "";
+    const styleH = (PSZ.el("style_home")?.value || "").toLowerCase();
+    const styleA = (PSZ.el("style_away")?.value || "").toLowerCase();
 
-    const formH  = PSZ.el("formation_home")?.value || "";
-    const formA  = PSZ.el("formation_away")?.value || "";
+    const flexH = PSZ.num("home_flex",5);
+    const flexA = PSZ.num("away_flex",5);
 
-    const mt     = (PSZ.el("match_type")?.value || "league").toLowerCase();
+    const momH  = PSZ.num("home_mom",5);
+    const momA  = PSZ.num("away_mom",5);
 
-    let notes = [];
-
-    // Benturan gaya
-    if (styleH === "high_press" && styleA === "direct") {
-        notes.push("High press vs direct: pertandingan berpotensi chaos dan transisi cepat.");
-    }
-    if (styleH === "possession" && styleA === "low_block") {
-        notes.push("Possession vs low block: kemungkinan Home dominan bola, Away menunggu counter.");
-    }
-    if (styleH === "transition" || styleA === "transition") {
-        notes.push("Salah satu tim fokus transisi, moment kehilangan bola krusial.");
+    function styleScore(s){
+        if (s.includes("gegenpress")) return 7.5;
+        if (s.includes("high_press")) return 7.0;
+        if (s.includes("direct"))     return 6.5;
+        if (s.includes("possession")) return 6.0;
+        if (s.includes("low_block"))  return 5.0;
+        return 5.5;
     }
 
-    // Formasi
-    if (formH.startsWith("4-3-3") && formA.startsWith("4-4-2")) {
-        notes.push("433 vs 442: sayap Home bisa mengeksploitasi ruang half-space.");
-    }
-    if (formH.startsWith("3-5-2") || formA.startsWith("3-5-2")) {
-        notes.push("3-5-2: area sayap penting, duel wingback bisa menentukan.");
-    }
+    let tH = styleScore(styleH) + (flexH - 5)*0.6 + (momH - 5)*0.4;
+    let tA = styleScore(styleA) + (flexA - 5)*0.6 + (momA - 5)*0.4;
 
-    // Match type
-    if (mt === "derby") {
-        notes.push("Derby: faktor emosi tinggi, kartu dan pelanggaran bisa meningkat.");
-    }
-    if (mt === "final" || mt === "knockout") {
-        notes.push("Knockout/final: kehati-hatian awal tinggi, tapi bisa terbuka jika buntu.");
-    }
+    tH = PSZ_c10(tH);
+    tA = PSZ_c10(tA);
 
-    if (!notes.length) {
-        notes.push("Tidak ada benturan taktik ekstrem, laga cenderung taktis dan seimbang.");
-    }
+    PSZ.state.tca = {home: tH, away: tA};
 
-    PSZ.state.tca = {notes};
-
-    notes.forEach(n=>PSZ.log("TCA: " + n));
-    PSZ.log("=== TCA ENGINE END ===\n");
+    PSZ.log("TCA v2 Home : " + tH.toFixed(2));
+    PSZ.log("TCA v2 Away : " + tA.toFixed(2));
+    PSZ.log("=== TCA v2 END ===\n");
 
     return PSZ.state.tca;
 };
 
 
 // ======================================================================
-// 3. PIM — PRESSING INTENSITY MODEL (Early / Mid / Late)
+// 3. PIM v2 — Psychological Impact Model
+//    Menganalisa faktor mental berdasarkan:
+//    - Importance
+    - Stability vs Momentum
+    - Pressing intensity (tim agresif biasanya lebih percaya diri)
 // ======================================================================
-PSZ.pimEngine = function () {
+PSZ.PIM = function () {
 
-    PSZ.log("=== PIM ENGINE START ===");
+    PSZ.log("=== PIM v2 START ===");
 
-    const tci = PSZ.state.tci_profile || null;
+    const tci = PSZ.state.tci_profile || {importance:5};
+    const imp = tci.importance;
+
+    const stH  = PSZ.num("home_st",5);
+    const stA  = PSZ.num("away_st",5);
+
+    const momH = PSZ.num("home_mom",5);
+    const momA = PSZ.num("away_mom",5);
+
     const pressH = PSZ.state.pressH || 5;
     const pressA = PSZ.state.pressA || 5;
 
-    if (!tci) {
-        PSZ.log("TCI belum dihitung — jalankan Auto TCI terlebih dahulu.");
-        return;
-    }
+    let pH = 5;
+    pH += (stH - 5)*0.6;
+    pH += (momH - 5)*0.8;
+    pH += (pressH - 5)*0.4;
+    pH += (imp - 5)*0.25;
 
-    function phaseIntensity(tempoPhase, chaosPhase, pressAvg) {
-        let val = 5;
-        val += (tempoPhase - 5) * 0.4;
-        val += (chaosPhase - 5) * 0.3;
-        val += (pressAvg - 5) * 0.4;
-        return Math.max(1, Math.min(10, val));
-    }
+    let pA = 5;
+    pA += (stA - 5)*0.6;
+    pA += (momA - 5)*0.8;
+    pA += (pressA - 5)*0.4;
+    pA += (imp - 5)*0.25;
 
-    const pressAvg = (pressH + pressA) / 2;
+    pH = PSZ_c10(pH);
+    pA = PSZ_c10(pA);
 
-    const early = phaseIntensity(tci.tempo.early, tci.chaos.early, pressAvg);
-    const mid   = phaseIntensity(tci.tempo.mid,   tci.chaos.mid,   pressAvg);
-    const late  = phaseIntensity(tci.tempo.late,  tci.chaos.late,  pressAvg);
+    PSZ.state.pim = {home: pH, away: pA};
 
-    PSZ.state.pim = {early, mid, late};
-
-    PSZ.log("PIM Early : " + early.toFixed(2));
-    PSZ.log("PIM Mid   : " + mid.toFixed(2));
-    PSZ.log("PIM Late  : " + late.toFixed(2));
-    PSZ.log("=== PIM ENGINE END ===\n");
+    PSZ.log("PIM v2 Home : " + pH.toFixed(2));
+    PSZ.log("PIM v2 Away : " + pA.toFixed(2));
+    PSZ.log("=== PIM v2 END ===\n");
 
     return PSZ.state.pim;
 };
 
 
 // ======================================================================
-// 4. xT-lite — SIMPLIFIED EXPECTED THREAT MODEL
+// 4. xT-lite v2 — Expected Threat Lite
+//    - Fleksibilitas tim
+//    - Pressing disruptif
+//    - xG per peluang berbahaya
 // ======================================================================
-PSZ.xtLiteEngine = function () {
+PSZ.calcXTLite = function () {
 
-    PSZ.log("=== xT-LITE ENGINE START ===");
+    PSZ.log("=== xT-lite v2 START ===");
 
-    const xgH  = PSZ.num("adv_xg_home",1.4);
-    const xgA  = PSZ.num("adv_xg_away",1.4);
+    const xgH  = PSZ.num("adv_xg_home",1.40);
+    const xgA  = PSZ.num("adv_xg_away",1.40);
 
-    const flow  = PSZ.state.flow  || {home:5, away:5};
-    const trend = PSZ.state.trend || {home:5, away:5};
+    const flexH = PSZ.num("home_flex",5);
+    const flexA = PSZ.num("away_flex",5);
 
-    const tci = PSZ.state.tci_profile || {
-        tempo:{global:5},
-        chaos:{global:5}
-    };
+    const pressH = PSZ.state.pressH || 5;
+    const pressA = PSZ.state.pressA || 5;
 
-    // Threat Index sederhana 1–20
-    function calcXT(xg, fl, tr, tempo, chaos) {
-        let val = 5;
-        val += xg * 2.0;
-        val += (fl - 5) * 0.4;
-        val += (tr - 5) * 0.4;
-        val += (tempo - 5) * 0.6;
-        val += (chaos - 5) * 0.3;
-        return Math.max(1, Math.min(20, val));
-    }
+    let xtH = 10 + (xgH - 1.2)*4 + (flexH - 5)*0.8 + (pressH - 5)*0.5;
+    let xtA = 10 + (xgA - 1.2)*4 + (flexA - 5)*0.8 + (pressA - 5)*0.5;
 
-    const xtH = calcXT(xgH, flow.home, trend.home, tci.tempo.global, tci.chaos.global);
-    const xtA = calcXT(xgA, flow.away, trend.away, tci.tempo.global, tci.chaos.global);
+    xtH = Math.max(1, xtH);
+    xtA = Math.max(1, xtA);
 
     PSZ.state.xtlite = {home: xtH, away: xtA};
 
-    PSZ.log("xT-lite Home : " + xtH.toFixed(2));
-    PSZ.log("xT-lite Away : " + xtA.toFixed(2));
-    PSZ.log("=== xT-LITE ENGINE END ===\n");
+    PSZ.log("xT-lite v2 Home : " + xtH.toFixed(2));
+    PSZ.log("xT-lite v2 Away : " + xtA.toFixed(2));
+    PSZ.log("=== xT-lite v2 END ===\n");
 
     return PSZ.state.xtlite;
 };
 
 
 // ======================================================================
-// 5. BIND TOMBOL PART 7
+// 5. BIND TOMBOL (tidak mengubah nama tombol)
 // ======================================================================
 if (PSZ.el("btnDIM"))
-    PSZ.el("btnDIM").onclick = () => PSZ.dimEngine();
+    PSZ.el("btnDIM").onclick = () => PSZ.DIM();
 
 if (PSZ.el("btnTCA"))
-    PSZ.el("btnTCA").onclick = () => PSZ.tcaEngine();
+    PSZ.el("btnTCA").onclick = () => PSZ.TCA();
 
 if (PSZ.el("btnPIM"))
-    PSZ.el("btnPIM").onclick = () => PSZ.pimEngine();
+    PSZ.el("btnPIM").onclick = () => PSZ.PIM();
 
-if (PSZ.el("btnXT"))
-    PSZ.el("btnXT").onclick = () => PSZ.xtLiteEngine();
+if (PSZ.el("btnXTLite"))
+    PSZ.el("btnXTLite").onclick = () => PSZ.calcXTLite();
 
-PSZ.log("PART 7 Loaded: DIM + TCA + PIM + xT-lite.");
+PSZ.log("PART 7 v2 Loaded: DIM v2 + TCA v2 + PIM v2 + xT-lite v2");
 
-</script>
+</script>        
 </body>
 
 </html>
