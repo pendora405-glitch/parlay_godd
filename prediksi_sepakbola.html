@@ -1580,5 +1580,255 @@ PSZ.el("btnXT")  && (PSZ.el("btnXT").onclick  = ()=> PSZ.runXT());
 PSZ.log("PART 7 Loaded: DIM + TCA + PIM v2 + xT-lite aktif.");
 
 </script>
+    <!-- =======================
+PATCH-FIX: AutoPPDA, MatchType, PART7 buttons, bindings, safety-fallbacks
+Paste this at the end of your HTML (before </body>)
+======================= -->
+<script>
+(function(){
+  // safety
+  if(!window.PSZ) window.PSZ = {};
+  PSZ.state = PSZ.state || {};
+
+  // helper: safe get element by multiple possible ids
+  function getFirstEl(ids){
+    for(const id of ids){
+      const e = document.getElementById(id);
+      if(e) return e;
+    }
+    return null;
+  }
+
+  // ---------- 1) FIX autoPPDA (override) ----------
+  PSZ.autoPPDA = function(){
+    // try multiple possible id names for pressing dropdowns (backwards-compatible)
+    const styleHEl = getFirstEl(["press_style_home","press_home","press_home_style","press-home"]);
+    const styleAEl = getFirstEl(["press_style_away","press_away","press_away_style","press-away"]);
+
+    const styleH = (styleHEl?.value || "").trim();
+    const styleA = (styleAEl?.value || "").trim();
+
+    // fallback map (same as Part1)
+    function pressingPresetToPPDA(style){
+      switch(style){
+        case "extreme_high":  return 4.5;
+        case "gegenpress":    return 5.5;
+        case "high_press":    return 7.0;
+        case "mid_press":     return 9.5;
+        case "mid_block":     return 11.5;
+        case "low_block":     return 14.5;
+        case "passive":       return 17.0;
+        default:              return 11.0;
+      }
+    }
+
+    let ppdaH = pressingPresetToPPDA(styleH);
+    let ppdaA = pressingPresetToPPDA(styleA);
+
+    // read xGA / error safely
+    const xgaH = PSZ.num("adv_xga_home", PSZ.num("xga_home",1.3));
+    const xgaA = PSZ.num("adv_xga_away", PSZ.num("xga_away",1.3));
+    const errH = PSZ.num("adv_err_home", PSZ.num("err_home",0.10));
+    const errA = PSZ.num("adv_err_away", PSZ.num("err_away",0.10));
+
+    // corrections
+    ppdaH += (xgaH - 1.2) * 2.2;
+    ppdaA += (xgaA - 1.2) * 2.2;
+    ppdaH += errH * 11;
+    ppdaA += errA * 11;
+
+    ppdaH = Math.max(4, Math.min(20, ppdaH));
+    ppdaA = Math.max(4, Math.min(20, ppdaA));
+
+    // update DOM (try known ids)
+    const outH = getFirstEl(["adv_ppda_home","ppda_home","ppda-home"]);
+    const outA = getFirstEl(["adv_ppda_away","ppda_away","ppda-away"]);
+    if(outH) outH.value = ppdaH.toFixed(2);
+    if(outA) outA.value = ppdaA.toFixed(2);
+
+    // store press impact to PSZ.state for other modules
+    PSZ.state.pressH = (function(ppda){ return Math.max(0, Math.min(10, 12 - (ppda * 0.55))); })(ppdaH);
+    PSZ.state.pressA = (function(ppda){ return Math.max(0, Math.min(10, 12 - (ppda * 0.55))); })(ppdaA);
+
+    PSZ.log("Patch: AutoPPDA executed (safe mode).");
+  };
+
+  // ---------- 2) Ensure match_type exists (create if missing) ----------
+  (function ensureMatchType(){
+    const exists = document.getElementById("match_type") || document.querySelector("[name='match_type']");
+    if(exists) return;
+
+    // find a container to insert controls (try toolbar ids), fallback to body top
+    const container = getFirstEl(["controls","toolbar","tools_top","tools","top_panel"]) || document.body;
+
+    // create small select row
+    const wrapper = document.createElement("div");
+    wrapper.style.padding = "6px";
+    wrapper.style.margin = "6px 0";
+    wrapper.style.borderTop = "1px dashed #ddd";
+    wrapper.id = "patch_match_type_row";
+
+    const label = document.createElement("label");
+    label.textContent = "Match type: ";
+    label.style.marginRight = "6px";
+    wrapper.appendChild(label);
+
+    const sel = document.createElement("select");
+    sel.id = "match_type";
+    const opts = ["league","bigmatch","cup","knockout","final","relegation","derby","friendly"];
+    opts.forEach(o=>{
+      const op = document.createElement("option");
+      op.value = o;
+      op.textContent = o;
+      sel.appendChild(op);
+    });
+    sel.value = "league";
+    wrapper.appendChild(sel);
+
+    // small help text
+    const help = document.createElement("small");
+    help.style.marginLeft = "10px";
+    help.style.color = "#666";
+    help.textContent = "(patch: created match_type select)";
+    wrapper.appendChild(help);
+
+    // insert at top of container
+    container.insertBefore(wrapper, container.firstChild);
+    PSZ.log("Patch: match_type select created.");
+  })();
+
+
+  // ---------- 3) Add PART7 buttons if missing ----------
+  (function ensurePart7Buttons(){
+    // check if at least one of the buttons exists
+    if(document.getElementById("btnDIM") && document.getElementById("btnTCA") &&
+       document.getElementById("btnPIM") && document.getElementById("btnXT")) {
+      PSZ.log("Patch: PART7 buttons already present.");
+      return;
+    }
+
+    // choose container to append buttons (try bottom controls)
+    const container = getFirstEl(["controls","toolbar","tools_bottom","bottom_panel"]) || document.body;
+
+    const panel = document.createElement("div");
+    panel.id = "patch_part7_panel";
+    panel.style.padding = "8px";
+    panel.style.margin = "8px 0";
+    panel.style.borderTop = "1px solid #eee";
+    panel.style.display = "flex";
+    panel.style.flexWrap = "wrap";
+    panel.style.gap = "6px";
+
+    function mkBtn(id, text){
+      const b = document.createElement("button");
+      b.id = id;
+      b.textContent = text;
+      b.style.padding = "6px 10px";
+      b.style.cursor = "pointer";
+      b.className = "patch-btn";
+      return b;
+    }
+
+    panel.appendChild(mkBtn("btnDIM","DIM"));
+    panel.appendChild(mkBtn("btnTCA","TCA"));
+    panel.appendChild(mkBtn("btnPIM","PIM"));
+    panel.appendChild(mkBtn("btnXT","xT-lite"));
+
+    // small label
+    const lbl = document.createElement("div");
+    lbl.style.flexBasis = "100%";
+    lbl.style.fontSize = "12px";
+    lbl.style.color = "#444";
+    lbl.textContent = "Patch: Part7 quick buttons";
+    panel.appendChild(lbl);
+
+    container.appendChild(panel);
+
+    // bind events (if functions available, call; else warn)
+    setTimeout(function bindPart7(){
+      const btnDIM = document.getElementById("btnDIM");
+      const btnTCA = document.getElementById("btnTCA");
+      const btnPIM = document.getElementById("btnPIM");
+      const btnXT  = document.getElementById("btnXT");
+
+      if(btnDIM) btnDIM.onclick = ()=> {
+        if(typeof PSZ.runDIM === "function") PSZ.runDIM();
+        else PSZ.log("runDIM() not found in script.");
+      };
+      if(btnTCA) btnTCA.onclick = ()=> {
+        if(typeof PSZ.runTCA === "function") PSZ.runTCA();
+        else PSZ.log("runTCA() not found in script.");
+      };
+      if(btnPIM) btnPIM.onclick = ()=> {
+        if(typeof PSZ.runPIM === "function") PSZ.runPIM();
+        else PSZ.log("runPIM() not found in script.");
+      };
+      if(btnXT) btnXT.onclick = ()=> {
+        if(typeof PSZ.runXT === "function") PSZ.runXT();
+        else PSZ.log("runXT() not found in script.");
+      };
+
+      PSZ.log("Patch: Part7 buttons created and bound (if modules exist).");
+    }, 300);
+  })();
+
+
+  // ---------- 4) safe-bind existing named buttons to patched functions ----------
+  (function rebindExistingButtons(){
+    // make sure btnAutoPPDA triggers PSZ.autoPPDA
+    const bAutoPP = getFirstEl(["btnAutoPPDA","btnAutoPpda","btnAutoPP"]);
+    if(bAutoPP) bAutoPP.onclick = ()=> PSZ.autoPPDA();
+
+    // ensure btnTCI and btnAutoTCI exist and bound
+    const bTCI = getFirstEl(["btnTCI","btnAutoTCI","btn_tci"]);
+    if(bTCI) bTCI.onclick = ()=> PSZ.autoTCI();
+
+    // bind validate if exists
+    const vb = getFirstEl(["btnValidate","btn_check","btnValidateInput"]);
+    if(vb) vb.onclick = ()=> PSZ.validateInput();
+
+    PSZ.log("Patch: core button bindings (AutoPPDA/AutoTCI/Validate) ensured.");
+  })();
+
+
+  // ---------- 5) minor safety: ensure output textarea exists ----------
+  (function ensureOutputArea(){
+    if(document.getElementById("output")) return;
+    // try to place small output area at bottom
+    const o = document.createElement("textarea");
+    o.id = "output";
+    o.rows = 10;
+    o.style.width = "100%";
+    o.style.fontSize = "12px";
+    o.style.marginTop = "12px";
+    o.readOnly = true;
+    // append to body end
+    document.body.appendChild(o);
+    PSZ.log("Patch: output textarea created (id=output).");
+  })();
+
+
+  // ---------- 6) quick diagnostics function ----------
+  PSZ.patchDiagnostic = function(){
+    PSZ.log("=== Patch Diagnostic ===");
+    PSZ.log("press_style_home element: " + (!!getFirstEl(["press_style_home","press_home","press_home_style"])));
+    PSZ.log("adv_ppda_home element: " + (!!getFirstEl(["adv_ppda_home","ppda_home"])));
+    PSZ.log("match_type element: " + (!!document.getElementById("match_type")));
+    PSZ.log("btnDIM/btnTCA/btnPIM/btnXT: " + (!!document.getElementById("btnDIM")) + "/" + (!!document.getElementById("btnTCA")) + "/" + (!!document.getElementById("btnPIM")) + "/" + (!!document.getElementById("btnXT")));
+    PSZ.log("PSZ.autoPPDA defined: " + (typeof PSZ.autoPPDA === "function"));
+    PSZ.log("PSZ.autoTCI defined: " + (typeof PSZ.autoTCI === "function"));
+    PSZ.log("PSZ.runDIM defined: " + (typeof PSZ.runDIM === "function"));
+    PSZ.log("PSZ.runTCA defined: " + (typeof PSZ.runTCA === "function"));
+    PSZ.log("PSZ.runPIM defined: " + (typeof PSZ.runPIM === "function"));
+    PSZ.log("PSZ.runXT defined: " + (typeof PSZ.runXT === "function"));
+    PSZ.log("=========================");
+  };
+
+  // run diagnostic once shortly after load (give other scripts time to register)
+  setTimeout(function(){ try{ PSZ.patchDiagnostic(); }catch(e){ console.warn(e); } }, 600);
+
+  PSZ.log("Patch-fix applied: AutoPPDA safe override, match_type ensured, PART7 quick-buttons added.");
+})();
+</script>
   </body>
   </html>
