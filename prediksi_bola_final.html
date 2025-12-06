@@ -137,7 +137,7 @@ textarea {
 </div>
 
 <div class="card">
-    <h2>Engine Tombol (Core + God + Supreme)</h2>
+    <h2>Engine Tombol (Core + God + Supreme + Ultra)</h2>
     <!-- CORE -->
     <button id="btn_analyze">PRIME</button>
     <button id="btn_hybrid">HYBRID</button>
@@ -156,7 +156,12 @@ textarea {
     <br>
     <!-- SUPREME -->
     <button id="btn_supreme">SUPREME ENGINE (AI DECISION)</button>
-</div>
+    <br>
+    <!-- ULTRA SUPREME -->
+    <button id="btn_montecarlo">MONTE CARLO SCORES</button>
+    <button id="btn_variance">VARIANCE ENGINE</button>
+    <button id="btn_ultra_supreme">ULTRA SUPREME ENGINE</button>
+    </div>
 
 <div class="card">
     <h2>Output</h2>
@@ -1106,7 +1111,151 @@ PSZ.log(txt.join("\n"));
     return PSZ.state.team_identity;
 
 };
+// ======================================================
+// MONTE CARLO SCORE SIMULATION (ULTRA MODULE)
+// ======================================================
+PSZ.runMonteCarloScores = function () {
+    const teams = PSZ.getTeams();
+    const dxg = PSZ.state.dxg || PSZ.dynamicXG();
 
+    const hxg = dxg.hxg_dyn ?? dxg.hxg ?? PSZ.num("home_xg");
+    const axg = dxg.axg_dyn ?? dxg.axg ?? PSZ.num("away_xg");
+
+    // pembangkit Poisson sederhana
+    function samplePoisson(lambda) {
+        const L = Math.exp(-lambda);
+        let k = 0;
+        let p = 1;
+        do {
+            k++;
+            p *= Math.random();
+        } while (p > L);
+        return k - 1;
+    }
+
+    const iterations = 2000; // cukup tajam tapi masih ringan
+    const counts = {};
+    let homeWins = 0, draws = 0, awayWins = 0;
+    let over25 = 0, under25 = 0;
+    let bttsYes = 0, bttsNo = 0;
+
+    for (let i = 0; i < iterations; i++) {
+        const gh = samplePoisson(hxg);
+        const ga = samplePoisson(axg);
+        const key = gh + "-" + ga;
+        counts[key] = (counts[key] || 0) + 1;
+
+        if (gh > ga) homeWins++;
+        else if (gh === ga) draws++;
+        else awayWins++;
+
+        const total = gh + ga;
+        if (total > 2) over25++;
+        else under25++;
+
+        if (gh > 0 && ga > 0) bttsYes++;
+        else bttsNo++;
+    }
+
+    const mcScores = Object.entries(counts).map(([score, c]) => {
+        return {
+            score,
+            p: c / iterations
+        };
+    }).sort((a, b) => b.p - a.p).slice(0, 8);
+
+    const pHome = homeWins / iterations;
+    const pDraw = draws / iterations;
+    const pAway = awayWins / iterations;
+    const pOver = over25 / iterations;
+    const pUnder = under25 / iterations;
+    const pBTTSY = bttsYes / iterations;
+    const pBTTSN = bttsNo / iterations;
+
+    const fmt = (x) => (x * 100).toFixed(2);
+
+    const txt = [];
+    txt.push("=== MONTE CARLO SCORE SIMULATION ===");
+    txt.push(`Match: ${teams.home} vs ${teams.away}`);
+    txt.push(`Dynamic xG H/A: ${hxg.toFixed(2)} / ${axg.toFixed(2)}`);
+    txt.push(`Simulasi: ${iterations} pertandingan virtual`);
+    txt.push("");
+    txt.push("Probabilitas 1X2 (Monte Carlo):");
+    txt.push(`HOME : ${fmt(pHome)} %`);
+    txt.push(`DRAW : ${fmt(pDraw)} %`);
+    txt.push(`AWAY : ${fmt(pAway)} %`);
+    txt.push("");
+    txt.push("Probabilitas OU & BTTS (Monte Carlo):");
+    txt.push(`Over 2.5 : ${fmt(pOver)} %`);
+    txt.push(`Under 2.5: ${fmt(pUnder)} %`);
+    txt.push(`BTTS YES : ${fmt(pBTTSY)} %`);
+    txt.push(`BTTS NO  : ${fmt(pBTTSN)} %`);
+    txt.push("");
+    txt.push("Scoreline paling sering muncul (Monte Carlo):");
+    mcScores.forEach(s => {
+        txt.push(`- ${s.score} → ~ ${fmt(s.p)} %`);
+    });
+    txt.push("");
+
+    PSZ.log(txt.join("\n"));
+
+    PSZ.state.montecarlo = {
+        iterations,
+        pHome, pDraw, pAway,
+        pOver, pUnder, pBTTSY, pBTTSN,
+        scores: mcScores
+    };
+    return PSZ.state.montecarlo;
+};
+    // ======================================================
+// VARIANCE ENGINE (CHAOS & SENSITIVITY ANALYZER)
+// ======================================================
+PSZ.runVarianceEngine = function () {
+    const teams = PSZ.getTeams();
+    const TCI   = PSZ.state.tci_profile || PSZ.autoTCI();
+    const dxg   = PSZ.state.dxg || PSZ.dynamicXG();
+    const { hxg, axg } = PSZ.getBaseXG();
+
+    const tempoDiff  = Math.abs((TCI.tempoH || 5) - (TCI.tempoA || 5));
+    const chaosAvg   = ( (TCI.chaosH || 5) + (TCI.chaosA || 5) ) / 2;
+    const xgBalance  = Math.abs(hxg - axg);
+    const xgTotal    = dxg.total_xg || (hxg + axg);
+
+    // indeks 0–10
+    let varianceCore = 0;
+    varianceCore += chaosAvg * 0.5;           // chaos = sumber variance utama
+    varianceCore += tempoDiff * 0.3;          // beda tempo = potensi swing
+    varianceCore += (xgBalance * 2) * 0.2;    // imbalance moderat = potensi upset
+
+    if (varianceCore > 10) varianceCore = 10;
+
+    let label = "MEDIUM VARIANCE";
+    if (varianceCore >= 7.5) label = "HIGH VARIANCE";
+    else if (varianceCore <= 3.5) label = "LOW VARIANCE";
+
+    // shock index: peluang hasil di luar logika xG searah
+    const shockIndex = Math.min(10, chaosAvg * 0.7 + (10 - xgBalance * 2) * 0.3);
+
+    const txt = [];
+    txt.push("=== VARIANCE ENGINE ===");
+    txt.push(`Match: ${teams.home} vs ${teams.away}`);
+    txt.push(`Variance Index : ${varianceCore.toFixed(2)} / 10 → ${label}`);
+    txt.push(`Chaos Average  : ${chaosAvg.toFixed(2)} / 10`);
+    txt.push(`Tempo Diff     : ${tempoDiff.toFixed(2)} / 10`);
+    txt.push(`xG Balance     : ${xgBalance.toFixed(2)} (H vs A)`);
+    txt.push(`Total xG Model : ${xgTotal.toFixed(2)}`);
+    txt.push(`Shock Potential: ${shockIndex.toFixed(2)} / 10`);
+    txt.push("");
+
+    PSZ.log(txt.join("\n"));
+
+    PSZ.state.variance = {
+        varianceIndex: varianceCore,
+        label,
+        shockIndex
+    };
+    return PSZ.state.variance;
+};
 
 
 // ======================================================
@@ -1432,7 +1581,138 @@ PSZ.runSupremeEngine = function () {
     PSZ.log(txt.join("\n"));
 
 };
+// ======================================================
+// ULTRA SUPREME ENGINE — META + MONTE CARLO + VARIANCE
+// ======================================================
+PSZ.runUltraSupremeEngine = function () {
+    const teams = PSZ.getTeams();
 
+    // pastikan modul inti sudah terisi
+    const TCI        = PSZ.state.tci_profile || PSZ.autoTCI();
+    const dxg        = PSZ.state.dxg         || PSZ.dynamicXG();
+    const prime      = PSZ.state.prime       || PSZ.runPrime();
+    const composite  = PSZ.state.composite   || PSZ.runCompositeModel();
+    const confidence = PSZ.state.confidence  || PSZ.runConfidenceIndex();
+    const infinity   = PSZ.state.infinity    || PSZ.runInfinity();
+    const ou         = PSZ.state.ou_heat     || PSZ.runOUHeat();
+    const identity   = PSZ.state.team_identity || PSZ.runTeamIdentity();
+    const mc         = PSZ.state.montecarlo  || PSZ.runMonteCarloScores();
+    const variance   = PSZ.state.variance    || PSZ.runVarianceEngine();
+
+    const tempoG = TCI.tempo?.global ?? (
+        ((TCI.tempoH || 5) + (TCI.tempoA || 5)) / 2
+    );
+    const chaosG = TCI.chaos?.global ?? (
+        ((TCI.chaosH || 5) + (TCI.chaosA || 5)) / 2
+    );
+
+    const pickSide = (pHome, pDraw, pAway) => {
+        if (pHome >= pDraw && pHome >= pAway) return "HOME";
+        if (pAway >= pDraw && pAway >= pHome) return "AWAY";
+        return "DRAW";
+    };
+
+    const mainPrime = pickSide(prime.pHome, prime.pDraw, prime.pAway);
+    const mainComp  = pickSide(composite.pHome, composite.pDraw, composite.pAway);
+    const mainMC    = pickSide(mc.pHome, mc.pDraw, mc.pAway);
+
+    let consensusCount = 0;
+    if (mainPrime === mainComp) consensusCount++;
+    if (mainPrime === mainMC) consensusCount++;
+    if (mainComp  === mainMC) consensusCount++;
+
+    let consensusLabel = "MODEL TERPECAH (tidak satu suara)";
+    if (consensusCount === 3) consensusLabel = "MODEL SANGAT SEPAKAT";
+    else if (consensusCount === 2) consensusLabel = "MODEL CENDERUNG SEPAKAT";
+
+    const cIndex   = confidence.cIndex ?? 50;
+    const predict  = confidence.predictability ?? 5;
+    const varIdx   = variance.varianceIndex ?? 5;
+    const shockIdx = variance.shockIndex ?? 5;
+
+    // Prediction Stability Index (0–100)
+    let stability = 0;
+    stability += cIndex * 0.5;
+    stability += (10 - varIdx) * 3;
+    stability += predict * 2;
+    stability -= shockIdx * 1.5;
+
+    if (stability < 0) stability = 0;
+    if (stability > 100) stability = 100;
+
+    let stabilityTag = "VOLATILE";
+    if (stability >= 70) stabilityTag = "STABLE";
+    else if (stability >= 45) stabilityTag = "SEMI-STABLE";
+
+    // Rekomendasi ringkas Ultra Supreme
+    let ultraSide = mainComp; // composite sebagai referensi utama
+    let ultraSideText = "";
+    if (ultraSide === "HOME") ultraSideText = "HOME / 1X (sesuai odds dan konteks).";
+    else if (ultraSide === "AWAY") ultraSideText = "AWAY / X2 (sesuai odds dan konteks).";
+    else ultraSideText = "DRAW atau handicap tipis.";
+
+    let ultraOU = "";
+    if (ou.tag === "HIGH OVER ZONE") {
+        ultraOU = "Pasar gol cenderung ke arah over.";
+    } else if (ou.tag === "LOW / UNDER ZONE") {
+        ultraOU = "Pasar gol cenderung ke arah under.";
+    } else {
+        ultraOU = "Zona netral OU, perlu konfirmasi odds dan kondisi match.";
+    }
+
+    const homeID = identity.homeTags ? identity.homeTags.join(", ") : "-";
+    const awayID = identity.awayTags ? identity.awayTags.join(", ") : "-";
+
+    const txt = [];
+    txt.push("================================================");
+    txt.push("=== ULTRA SUPREME ENGINE — FINAL META LAYER ===");
+    txt.push("================================================");
+    txt.push(`Match               : ${teams.home} vs ${teams.away}`);
+    txt.push(`Tempo / Chaos       : ${tempoG.toFixed(2)} / ${chaosG.toFixed(2)}`);
+    txt.push(`Dynamic xG Total    : ${dxg.total_xg.toFixed(2)}`);
+    txt.push("");
+    txt.push("MODEL UTAMA (PRIME / COMPOSITE / MONTE CARLO):");
+    txt.push(`- Prime main side      : ${mainPrime}`);
+    txt.push(`- Composite main side  : ${mainComp}`);
+    txt.push(`- Monte Carlo main side: ${mainMC}`);
+    txt.push(`- Status konsensus     : ${consensusLabel}`);
+    txt.push("");
+    txt.push("INDIKATOR STABILITAS:");
+    txt.push(`- Confidence Index        : ${cIndex.toFixed(1)} / 100 (${confidence.tag || "-"})`);
+    txt.push(`- Predictability          : ${predict.toFixed(2)} / 10`);
+    txt.push(`- Variance Index          : ${varIdx.toFixed(2)} / 10 (${variance.label})`);
+    txt.push(`- Shock Potential         : ${shockIdx.toFixed(2)} / 10`);
+    txt.push(`- Prediction StabilityIdx : ${stability.toFixed(1)} / 100 → ${stabilityTag}`);
+    txt.push("");
+    txt.push("TEAM IDENTITY:");
+    txt.push(`- ${teams.home}: ${homeID}`);
+    txt.push(`- ${teams.away}: ${awayID}`);
+    txt.push("");
+    txt.push("REKOMENDASI RINGKAS ULTRA SUPREME (berdasarkan input saat ini):");
+    txt.push(`- Sisi utama 1X2 model  : ${ultraSide}`);
+    txt.push(`- Terjemahan praktis    : ${ultraSideText}`);
+    txt.push(`- Pola OU/BTTS          : ${ultraOU}`);
+    txt.push(`- Mode Infinity         : ${infinity.safeMode ? "SAFE / CONTROL" : "AGGRESSIVE / CHAOTIC"}`);
+    txt.push("");
+    txt.push("Catatan:");
+    txt.push("- Semua hasil di atas murni dari data yang baru saja diinput.");
+    txt.push("- Gunakan bersamaan dengan informasi aktual (lineup, kondisi fisik, jadwal).");
+    txt.push("");
+
+    PSZ.log(txt.join("\n"));
+
+    PSZ.state.ultra_supreme = {
+        stability,
+        stabilityTag,
+        consensusLabel,
+        ultraSide,
+        ultraSideText,
+        ultraOU
+    };
+    return PSZ.state.ultra_supreme;
+};
+
+    
 
 
 // ======================================================
@@ -1440,175 +1720,106 @@ PSZ.runSupremeEngine = function () {
 // BIND TOMBOL + STARTUP
 
 // ======================================================
-
 PSZ.bindButtons = function () {
-
     const b = (id, fn) => {
-
         const el = PSZ.el(id);
-
         if (el) el.onclick = fn;
-
     };
 
-
-
     // Core
-
     b("btn_auto", () => {
-
         PSZ.log("Menjalankan AUTO CALC (TCI v9 + Dynamic xG)...");
-
         PSZ.autoTCI();
-
         PSZ.dynamicXG();
-
     });
-
-
 
     b("btn_analyze", () => {
-
         PSZ.log("Menjalankan PRIME ENGINE...");
-
         PSZ.runPrime();
-
     });
-
-
 
     b("btn_hybrid", () => {
-
         PSZ.log("Menjalankan HYBRID ENGINE...");
-
         PSZ.runHybrid();
-
     });
-
-
 
     b("btn_grand_unified", () => {
-
         PSZ.log("Menjalankan INFINITY ENGINE...");
-
         PSZ.runInfinity();
-
     });
-
-
 
     b("btn_dxg", () => {
-
         PSZ.log("Menjalankan Dynamic xG...");
-
         PSZ.dynamicXG();
-
     });
-
-
 
     b("btn_ou_heat", () => {
-
         PSZ.log("Menjalankan OU HEAT...");
-
         PSZ.runOUHeat();
-
     });
-
-
 
     b("btn_scoregrid", () => {
-
         PSZ.log("Menjalankan CORRECT SCORE GRID...");
-
         PSZ.runScoreGrid();
-
     });
-
-
 
     b("btn_brm", () => {
-
         PSZ.log("Menjalankan BRM...");
-
         PSZ.runBRM();
-
     });
-
-
 
     // God Mode
-
     b("btn_composite", () => {
-
         PSZ.log("Menjalankan COMPOSITE MODEL...");
-
         PSZ.runCompositeModel();
-
     });
-
-
 
     b("btn_confidence", () => {
-
         PSZ.log("Menjalankan CONFIDENCE INDEX...");
-
         PSZ.runConfidenceIndex();
-
     });
-
-
 
     b("btn_market_edge", () => {
-
         PSZ.log("Menjalankan MARKET EDGE ANALYZER...");
-
         PSZ.runMarketEdge();
-
     });
-
-
 
     b("btn_parlay_ai", () => {
-
         PSZ.log("Menjalankan PARLAY AI BUILDER...");
-
         PSZ.runParlayAI();
-
     });
-
-
 
     b("btn_team_id", () => {
-
         PSZ.log("Menjalankan TEAM IDENTITY...");
-
         PSZ.runTeamIdentity();
-
     });
-
-
 
     // Supreme
-
     b("btn_supreme", () => {
-
         PSZ.log("Menjalankan SUPREME ENGINE (Meta AI Decision)...");
-
         PSZ.runSupremeEngine();
-
     });
 
+    // Ultra Supreme
+    b("btn_montecarlo", () => {
+        PSZ.log("Menjalankan MONTE CARLO SCORE SIMULATION...");
+        PSZ.runMonteCarloScores();
+    });
+
+    b("btn_variance", () => {
+        PSZ.log("Menjalankan VARIANCE ENGINE...");
+        PSZ.runVarianceEngine();
+    });
+
+    b("btn_ultra_supreme", () => {
+        PSZ.log("Menjalankan ULTRA SUPREME ENGINE...");
+        PSZ.runUltraSupremeEngine();
+    });
 };
 
-
-
 document.addEventListener("DOMContentLoaded", function () {
-
     PSZ.bindButtons();
-
-    PSZ.log("SUPREME PARLAY ENGINE siap. Isi data aktual, lalu gunakan Auto Calc dan tombol lain sesuai kebutuhan.");
-
+    PSZ.log("SUPREME + ULTRA ENGINE siap. Isi data aktual, gunakan Auto Calc, lalu modul lain sesuai kebutuhan.");
 });
 </script>
 </div>
