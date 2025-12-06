@@ -1,1932 +1,544 @@
+<!-- ============================================================
+PREMIUM UI – PART A
+Header + Style + Layout Container
+=============================================================== -->
+
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Prime Singularity Zero – Parlay Engine (Rebuild)</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-  :root
-    {
-    --bg:#02030a;
-    --bg-panel:#070a16;
-    --accent:#12e4ff;
-    --accent-soft:#12b8e3;
-    --accent-2:#7bffb5;
-    --border:#232843;
-    --text:#f5f7ff;
-    --muted:#8f95c7;
-    --danger:#ff4f81;
-  }
-
-
-
-  *{
-
-
-
-    box-sizing:border-box;
-
-
-
-  }
-
-
-
-  body{
-
-
-
-    margin:0;
-
-
-
-    padding:24px;
-
-
-
-    background:
-
-
-
-      radial-gradient(circle at top,#142042 0,#02030a 55%,#000 100%);
-
-
-
-    color:var(--text);
-
-
-
-    font-family:"Segoe UI",system-ui,-apple-system,Arial,sans-serif;
-
-
-
-  }
-
-
-
-  h1{
-
-
-
-    font-size:24px;
-
-
-
-    margin:0 0 14px;
-
-
-
-    text-transform:uppercase;
-
-
-
-    letter-spacing:0.15em;
-
-
-
-    color:var(--accent);
-
-
-
-    text-shadow:
-
-
-
-      0 0 18px rgba(18,228,255,.85),
-
-
-
-      0 0 40px rgba(0,0,0,.9);
-
-
-
-  }
-
-
-
-  h2{
-
-
-
-    font-size:14px;
-
-
-
-    margin:0 0 8px;
-
-
-
-    letter-spacing:.06em;
-
-
-
-    text-transform:uppercase;
-
-
-
-    color:#e5e9ff;
-
-
-
-  }
-
-
-
-  h3{
-
-
-
-    font-size:12px;
-
-
-
-    margin:8px 0 6px;
-
-
-
-    color:var(--muted);
-
-
-
-    text-transform:uppercase;
-
-
-
-    letter-spacing:.08em;
-
-
-
-  }
-
-
-
-  .layout{
-
-
-
-    display:grid;
-
-
-
-    grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);
-
-
-
-    gap:18px;
-
-
-
-    align-items:flex-start;
-
-
-
-  }
-
-
-
-  .layout-main{
-
-
-
-    display:flex;
-
-
-
-    flex-direction:column;
-
-
-
-    gap:14px;
-
-
-
-  }
-
-
-
-  .layout-side{
-
-
-
-    position:sticky;
-
-
-
-    top:18px;
-
-
-
-  }
-
-
-
-  .section{
-
-
-
-    padding:12px 14px 14px;
-
-
-
-    border-radius:12px;
-
-
-
-    border:1px solid rgba(74,98,210,.7);
-
-
-
-    background:
-
-
-
-      linear-gradient(145deg,rgba(9,13,35,.96),rgba(5,9,24,.96));
-
-
-
-    box-shadow:
-
-
-
-      0 0 22px rgba(4,255,214,.12),
-
-
-
-      0 0 60px rgba(0,0,0,.8);
-
-
-
-    backdrop-filter:blur(18px);
-
-
-
-  }
-
-
-
-  label{
-
-
-
-    display:block;
-
-
-
-    margin-top:6px;
-
-
-
-    font-size:11px;
-
-
-
-    color:var(--muted);
-
-
-
-  }
-
-
-
-  input,
-
-
-
-  select{
-
-
-
-    width:100%;
-
-
-
-    margin-top:3px;
-
-
-
-    padding:7px 9px;
-
-
-
-    border-radius:8px;
-
-
-
-    border:1px solid rgba(86,102,160,.9);
-
-
-
-    background:
-
-
-
-      radial-gradient(circle at top,rgba(34,42,92,.9),rgba(8,11,32,.98));
-
-
-
-    color:var(--text);
-
-
-
-    font-size:11px;
-
-
-
-    outline:none;
-
-
-
-    transition:
-
-
-
-      border .16s ease,
-
-
-
-      box-shadow .16s ease,
-
-
-
-      background .16s ease;
-
-
-
-  }
-
-
-
-  input:focus,
-
-
-
-  select:focus{
-
-
-
-    border-color:var(--accent);
-
-
-
-    box-shadow:
-
-
-
-      0 0 0 1px rgba(18,228,255,.3),
-
-
-
-      0 0 18px rgba(0,255,204,.25);
-
-
-
-  }
-
-
-
-  input::placeholder{
-
-
-
-    color:rgba(160,168,220,.65);
-
-
-
-  }
-
-
-
-  .inline-2{
-
-
-
-    display:grid;
-
-
-
-    grid-template-columns:repeat(2,minmax(0,1fr));
-
-
-
-    gap:8px;
-
-
-
-  }
-
-
-
-  .inline-3{
-
-
-
-    display:grid;
-
-
-
-    grid-template-columns:repeat(3,minmax(0,1fr));
-
-
-
-    gap:6px;
-
-
-
-  }
-
-
-
-  .inline-4{
-
-
-
-    display:grid;
-
-
-
-    grid-template-columns:repeat(4,minmax(0,1fr));
-
-
-
-    gap:6px;
-
-
-
-  }
-
-
-
-  button{
-
-
-
-    display:inline-block;
-
-
-
-    margin-top:8px;
-
-
-
-    margin-right:6px;
-
-
-
-    margin-bottom:4px;
-
-
-
-    padding:7px 11px;
-
-
-
-    border-radius:999px;
-
-
-
-    border:none;
-
-
-
-    background:linear-gradient(135deg,var(--accent-soft),var(--accent));
-
-
-
-    color:#000;
-
-
-
-    font-size:10px;
-
-
-
-    font-weight:700;
-
-
-
-    letter-spacing:.08em;
-
-
-
-    text-transform:uppercase;
-
-
-
-    cursor:pointer;
-
-
-
-    box-shadow:0 0 16px rgba(18,228,255,.6);
-
-
-
-    transition:
-
-
-
-      transform .12s ease,
-
-
-
-      box-shadow .12s ease,
-
-
-
-      filter .12s ease;
-
-
-
-  }
-
-
-
-  button:hover{
-
-
-
-    transform:translateY(-1px) scale(1.01);
-
-
-
-    box-shadow:0 0 22px rgba(18,228,255,.9);
-
-
-
-    filter:brightness(1.05);
-
-
-
-  }
-
-
-
-  button:active{
-
-
-
-    transform:translateY(0) scale(.99);
-
-
-
-    box-shadow:0 0 10px rgba(18,228,255,.6);
-
-
-
-  }
-
-
-
-  textarea{
-
-
-
-    width:100%;
-
-
-
-    height:380px;
-
-
-
-    margin-top:8px;
-
-
-
-    padding:10px 12px;
-
-
-
-    border-radius:10px;
-
-
-
-    border:1px solid rgba(60,80,150,.9);
-
-
-
-    background:#02030a;
-
-
-
-    color:#38ff9c;
-
-
-
-    font-family:"JetBrains Mono","Fira Code",monospace;
-
-
-
-    font-size:11px;
-
-
-
-    line-height:1.32;
-
-
-
-    white-space:pre;
-
-
-
-    box-shadow:0 0 14px rgba(0,255,153,.3);
-
-
-
-  }
-
-
-
-  small{
-
-
-
-    display:block;
-
-
-
-    margin-top:3px;
-
-
-
-    font-size:10px;
-
-
-
-    color:var(--muted);
-
-
-
-  }
-
-
-
-  hr.line{
-
-
-
-    margin:10px 0;
-
-
-
-    border:0;
-
-
-
-    border-top:1px dashed rgba(70,96,175,.9);
-
-
-
-  }
-
-
-
-  .badge-row{
-
-
-
-    display:flex;
-
-
-
-    flex-wrap:wrap;
-
-
-
-    gap:6px;
-
-
-
-    margin:4px 0 6px;
-
-
-
-  }
-
-
-
-  .badge{
-
-
-
-    padding:3px 7px;
-
-
-
-    border-radius:999px;
-
-
-
-    border:1px solid rgba(120,140,255,.6);
-
-
-
-    font-size:9px;
-
-
-
-    letter-spacing:.09em;
-
-
-
-    text-transform:uppercase;
-
-
-
-    color:var(--muted);
-
-
-
-    background:radial-gradient(circle at top,rgba(43,55,120,.9),rgba(8,11,26,1));
-
-
-
-  }
-
-
-
-  .badge--manual{
-
-
-
-    border-color:#ff9f4f;
-
-
-
-    color:#ffd6a0;
-
-
-
-  }
-
-
-
-  .badge--auto{
-
-
-
-    border-color:#4dffb5;
-
-
-
-    color:#b6ffdf;
-
-
-
-  }
-
-
-
-  @media (max-width:960px){
-
-
-
-    body{padding:14px;}
-
-
-
-    .layout{
-
-
-
-      grid-template-columns:minmax(0,1fr);
-
-
-
+<meta charset="UTF-8">
+<title>Prediksi Sepakbola – Premium Engine</title>
+
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background: #f0f2f5;
+        margin: 0;
+        padding: 20px;
     }
-
-
-
-    .layout-side{
-
-
-
-      position:static;
-
-
-
+    h2 {
+        background: #0057b8;
+        color: white;
+        padding: 10px 15px;
+        border-radius: 6px;
+        margin-top: 30px;
     }
-
-
-
-  }
-
-
-
-  </style>
-
-
-
+    .card {
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 18px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+    .row {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+    .col {
+        flex: 1;
+        min-width: 240px;
+    }
+    input, select, button {
+        width: 100%;
+        padding: 8px;
+        margin-top: 6px;
+        margin-bottom: 14px;
+        border-radius: 6px;
+        border: 1px solid #bbb;
+        font-size: 14px;
+    }
+    button {
+        background: #0057b8;
+        color: white;
+        cursor: pointer;
+        border: none;
+    }
+    button:hover {
+        background: #003f88;
+    }
+</style>
 </head>
-
-
 
 <body>
 
+<h1 style="text-align:center; color:#003f88;">
+    ⚽ Prediksi Sepakbola – Premium Engine UI
+</h1>
 
+<div class="container">
 
-  <div class="layout">
+<!-- ====================== PART A END ======================== -->
+<!-- ============================================================
+PREMIUM UI – PART B
+Input xG / xGA / Error / PPDA / Pressing / TCI Auto
+=============================================================== -->
 
+<h2>🔍 Data Pertandingan Utama</h2>
 
+<div class="card">
+    <div class="row">
 
-    <!-- ================= MAIN INPUT SIDE ================= -->
+        <!-- xG -->
+        <div class="col">
+            <label>xG Home</label>
+            <input id="adv_xg_home" type="number" step="0.01" value="1.40">
 
-
-
-    <div class="layout-main">
-
-
-
-      <h1>PRIME SINGULARITY ZERO – PARLAY ENGINE</h1>
-
-
-
-
-
-
-
-      <!-- 1. Info pertandingan -->
-
-
-
-      <div class="section">
-
-
-
-        <h2>1. Info Pertandingan</h2>
-
-
-
-        <div class="inline-2">
-
-
-
-          <div>
-
-
-
-            <label>Home Team</label>
-
-
-
-            <input id="home_team" type="text" placeholder="Contoh: Fulham">
-
-
-
-          </div>
-
-
-
-          <div>
-
-
-
-            <label>Away Team</label>
-
-
-
-            <input id="away_team" type="text" placeholder="Contoh: Manchester City">
-
-
-
-          </div>
-
-
-
+            <label>xGA Home</label>
+            <input id="adv_xga_home" type="number" step="0.01" value="1.30">
         </div>
 
-
-
-        <div class="inline-3">
-
-
-
-          <div>
-
-
-
-            <label>Kompetisi / Liga</label>
-
-
-
-            <input id="league_name" type="text" placeholder="EPL, UCL, dll.">
-
-
-
-          </div>
-
-
-
-          <div>
-
-
-
-            <label>Tipe Pertandingan</label>
-
-
-
-            <select id="match_type">
-
-
-
-              <option value="league">Liga biasa</option>
-
-
-
-              <option value="big_match">Big match</option>
-
-
-
-              <option value="derby">Derby / Rivalitas</option>
-
-
-
-              <option value="cup">Cup / Knockout</option>
-
-
-
-              <option value="final">Final</option>
-
-
-
-              <option value="relegation">Zona degradasi</option>
-
-
-
-            </select>
-
-
-
-          </div>
-
-
-
-          <div>
-
-
-
-            <label>Venue</label>
-
-
-
-            <select id="venue_type">
-
-
-
-              <option value="home_strong">Kandang kuat</option>
-
-
-
-              <option value="home_normal">Kandang normal</option>
-
-
-
-              <option value="neutral">Neutral</option>
-
-
-
-              <option value="away_difficult">Tandang sulit</option>
-
-
-
-            </select>
-
-
-
-          </div>
-
-
-
+        <div class="col">
+            <label>xG Away</label>
+            <input id="adv_xg_away" type="number" step="0.01" value="1.40">
+
+            <label>xGA Away</label>
+            <input id="adv_xga_away" type="number" step="0.01" value="1.30">
         </div>
 
+        <!-- ERROR -->
+        <div class="col">
+            <label>Error Defensif Home (%)</label>
+            <input id="adv_err_home" type="number" step="0.01" value="0.10">
+
+            <label>Error Defensif Away (%)</label>
+            <input id="adv_err_away" type="number" step="0.01" value="0.10">
+        </div>
+    </div>
+</div>
 
 
-      </div>
+<h2>🔥 Pressing & PPDA</h2>
 
-
-
-
-
-
-
-      <!-- 2. Statistik dasar per laga -->
-
-
-
-      <div class="section">
-
-
-
-        <h2>2. Statistik Dasar per Laga</h2>
-
-
-
-        <div class="badge-row">
-
-
-
-          <span class="badge badge--manual">Input Manual</span>
-
-
-
-          <span class="badge badge--auto">Dipakai untuk AUTO-CALC</span>
-
-
-
+<div class="card">
+    <div class="row">
+        <div class="col">
+            <label>PPDA Home</label>
+            <input id="ppda_home" type="number" step="0.1" placeholder="Isi jika ada data resmi">
         </div>
 
-
-
-        <h3>Home</h3>
-
-
-
-        <div class="inline-4">
-
-
-
-          <div>
-
-
-
-            <label>GF Home / match</label>
-
-
-
-            <input id="h_gf" type="number" step="0.01" placeholder="1.60">
-
-
-
-          </div>
-
-
-
-          <div>
-
-
-
-            <label>GA Home / match</label>
-
-
-
-            <input id="h_ga" type="number" step="0.01" placeholder="1.10">
-
-
-
-          </div>
-
-
-
-          <div>
-
-
-
-            <label>xG Home / match</label>
-
-
-
-            <input id="adv_xg_home" type="number" step="0.01" placeholder="1.55">
-
-
-
-          </div>
-
-
-
-          <div>
-
-
-
-            <label>xGA Home / match</label>
-
-
-
-            <input id="adv_xga_home" type="number" step="0.01" placeholder="1.20">
-
-
-
-          </div>
-
-
-
+        <div class="col">
+            <label>PPDA Away</label>
+            <input id="ppda_away" type="number" step="0.1" placeholder="Isi jika ada data resmi">
         </div>
 
-
-
-        <h3>Away</h3>
-
-
-
-        <div class="inline-4">
-
-
-
-          <div>
-
-
-
-            <label>GF Away / match</label>
-
-
-
-            <input id="a_gf" type="number" step="0.01" placeholder="1.80">
-
-
-
-          </div>
-
-
-
-          <div>
-
-
-
-            <label>GA Away / match</label>
-
-
-
-            <input id="a_ga" type="number" step="0.01" placeholder="1.30">
-
-
-
-          </div>
-
-
-
-          <div>
-
-
-
-            <label>xG Away / match</label>
-
-
-
-            <input id="adv_xg_away" type="number" step="0.01" placeholder="1.75">
-
-
-
-          </div>
-
-
-
-          <div>
-
-
-
-            <label>xGA Away / match</label>
-
-
-
-            <input id="adv_xga_away" type="number" step="0.01" placeholder="1.35">
-
-
-
-          </div>
-
-
-
-        </div>
-
-
-
-      </div>
-
-
-
-
-
-
-
-      <!-- 3. Form & Momentum -->
-
-
-
-      <div class="section">
-
-
-
-        <h2>3. Form & Momentum</h2>
-
-
-
-        <h3>Form 5 Laga Terakhir (W-D-L)</h3>
-
-
-
-        <div class="inline-2">
-
-
-
-          <div>
-
-
-
-            <label>Home – W / D / L</label>
-
-
-
-            <div class="inline-3">
-
-
-
-              <input id="form_home_w" type="number" placeholder="3">
-
-
-
-              <input id="form_home_d" type="number" placeholder="1">
-
-
-
-              <input id="form_home_l" type="number" placeholder="1">
-
-
-
-            </div>
-
-
-
-          </div>
-
-
-
-          <div>
-
-
-
-            <label>Away – W / D / L</label>
-
-
-
-            <div class="inline-3">
-
-
-
-              <input id="form_away_w" type="number" placeholder="2">
-
-
-
-              <input id="form_away_d" type="number" placeholder="2">
-
-
-
-              <input id="form_away_l" type="number" placeholder="1">
-
-
-
-            </div>
-
-
-
-          </div>
-
-
-
-        </div>
-
-
-
-        <div class="inline-3">
-
-
-
-          <div>
-
-
-
-            <label>Momentum Home (0–10)</label>
-
-
-
-            <input id="home_mom" type="number" step="0.1" placeholder="5.0">
-
-
-
-          </div>
-
-
-
-          <div>
-
-
-
-            <label>Momentum Away (0–10)</label>
-
-
-
-            <input id="away_mom" type="number" step="0.1" placeholder="5.0">
-
-
-
-          </div>
-
-
-
-          <div>
-
-
-
-            <label>Stabilitas Home (0–10)</label>
-
-
-
-            <input id="home_stab" type="number" step="0.1" placeholder="5.0">
-
-
-
-          </div>
-
-
-
-        </div>
-
-
-
-        <div class="inline-2">
-
-
-
-          <div>
-
-
-
-            <label>Stabilitas Away (0–10)</label>
-
-
-
-            <input id="away_stab" type="number" step="0.1" placeholder="5.0">
-
-
-
-          </div>
-
-
-
-          <div>
-
-
-
-            <label>Match Importance (0–10)</label>
-
-
-
-            <input id="importance_input" type="number" step="0.1" placeholder="5.0">
-
-
-
-          </div>
-
-
-
-        </div>
-
-
-
-      </div>
-
-
-
-
-
-
-
-      <!-- 4. Pressing & PPDA -->
-
-
-
-      <div class="section">
-
-
-
-        <h2>4. Pressing & PPDA</h2>
-
-
-
-        <div class="badge-row">
-
-
-
-          <span class="badge badge--manual">Isi jika ada data PPDA asli</span>
-
-
-
-          <span class="badge badge--auto">Kalau tidak ada, pakai gaya pressing → AUTO PPDA</span>
-
-
-
-        </div>
-
-
-
-        <h3>Gaya Pressing</h3>
-
-
-
-        <div class="inline-2">
-
-
-
-          <div>
-
-
-
-            <label>Pressing Home</label>
-
-
-
+        <div class="col">
+            <label>Gaya Pressing Home</label>
             <select id="press_style_home">
-
-
-
-              <option value="">Pilih gaya pressing</option>
-
-
-
-              <option value="extreme_high">Extreme High Press</option>
-
-
-
-              <option value="gegenpress">Gegenpress</option>
-
-
-
-              <option value="semi_gegenpress">Semi-Gegenpress</option>
-
-
-
-              <option value="positional_high">Positional High</option>
-
-
-
-              <option value="reactive_press">Reactive Mid Press</option>
-
-
-
-              <option value="zonal_midlow">Zonal Mid-Low</option>
-
-
-
-              <option value="deep_low">Deep Low Block</option>
-
-
-
-              <option value="wing_press">Wing Trap Press</option>
-
-
-
-              <option value="inverted_press">Inverted Lane Press</option>
-
-
-
-              <option value="ultra_compact">Ultra Compact Block</option>
-
-
-
+                <option value="0">Auto</option>
+                <option value="9">Ultra High Press</option>
+                <option value="8">High Press</option>
+                <option value="7">Mid-Press Aggressive</option>
+                <option value="6">Mid Block</option>
+                <option value="5">Standard</option>
+                <option value="4">Low Block</option>
+                <option value="3">Passive Defensive</option>
             </select>
 
-
-
-          </div>
-
-
-
-          <div>
-
-
-
-            <label>Pressing Away</label>
-
-
-
+            <label>Gaya Pressing Away</label>
             <select id="press_style_away">
-
-
-
-              <option value="">Pilih gaya pressing</option>
-
-
-
-              <option value="extreme_high">Extreme High Press</option>
-
-
-
-              <option value="gegenpress">Gegenpress</option>
-
-
-
-              <option value="semi_gegenpress">Semi-Gegenpress</option>
-
-
-
-              <option value="positional_high">Positional High</option>
-
-
-
-              <option value="reactive_press">Reactive Mid Press</option>
-
-
-
-              <option value="zonal_midlow">Zonal Mid-Low</option>
-
-
-
-              <option value="deep_low">Deep Low Block</option>
-
-
-
-              <option value="wing_press">Wing Trap Press</option>
-
-
-
-              <option value="inverted_press">Inverted Lane Press</option>
-
-
-
-              <option value="ultra_compact">Ultra Compact Block</option>
-
-
-
+                <option value="0">Auto</option>
+                <option value="9">Ultra High Press</option>
+                <option value="8">High Press</option>
+                <option value="7">Mid-Press Aggressive</option>
+                <option value="6">Mid Block</option>
+                <option value="5">Standard</option>
+                <option value="4">Low Block</option>
+                <option value="3">Passive Defensive</option>
             </select>
-
-
-
-          </div>
-
-
-
         </div>
-
-
-
-        <h3>PPDA & Error Defensive</h3>
-
-
-
-        <div class="inline-4">
-
-
-
-          <div>
-
-
-
-            <label>PPDA Home (jika ada)</label>
-
-
-
-            <input id="adv_ppda_home" type="number" step="0.01" placeholder="isi manual / auto">
-
-
-
-          </div>
-
-
-
-          <div>
-
-
-
-            <label>PPDA Away (jika ada)</label>
-
-
-
-            <input id="adv_ppda_away" type="number" step="0.01" placeholder="isi manual / auto">
-
-
-
-          </div>
-
-
-
-          <div>
-
-
-
-            <label>Error Defensif Home / match</label>
-
-
-
-            <input id="adv_err_home" type="number" step="0.01" placeholder="0.15">
-
-
-
-          </div>
-
-
-
-          <div>
-
-
-
-            <label>Error Defensif Away / match</label>
-
-
-
-            <input id="adv_err_away" type="number" step="0.01" placeholder="0.18">
-
-
-
-          </div>
-
-
-
-        </div>
-
-
-
-        <div class="inline-2">
-
-
-
-          <div>
-
-
-
-            <label>Index Press Home (0–10)</label>
-
-
-
-            <input id="home_press" type="number" step="0.1" placeholder="5.0">
-
-
-
-          </div>
-
-
-
-          <div>
-
-
-
-            <label>Index Press Away (0–10)</label>
-
-
-
-            <input id="away_press" type="number" step="0.1" placeholder="5.0">
-
-
-
-          </div>
-
-
-
-        </div>
-
-
-
-        <button id="btn_auto_ppda">AUTO ESTIMATE PPDA (Lite)</button>
-
-
-
-        <button id="btn_auto_ppda_ext">AUTO PPDA EXTENDED</button>
-
-
-
-        <small>Jika PPDA tidak tersedia, pilih gaya pressing lalu gunakan tombol AUTO untuk estimasi.</small>
-
-
-
-      </div>
-
-
-
-
-
-
-
-      <!-- 5. Tempo / Chaos / Importance & Match Style -->
-
-
-
-      <div class="section">
-
-
-
-        <h2>5. Tempo / Chaos / Match Style</h2>
-
-
-
-        <div class="inline-3">
-
-
-
-          <div>
-
-
-
-            <label>Tempo (0–10)</label>
-
-
-
-            <input id="tempo_input" type="number" step="0.1" placeholder="5.0">
-
-
-
-          </div>
-
-
-
-          <div>
-
-
-
-            <label>Chaos (0–10)</label>
-
-
-
-            <input id="chaos_input" type="number" step="0.1" placeholder="5.0">
-
-
-
-          </div>
-
-
-
-          <div>
-
-
-
-            <label>Intensity (opsional)</label>
-
-
-
-            <input id="intensity_input" type="number" step="0.1" placeholder="5.0">
-
-
-
-          </div>
-
-
-
-        </div>
-
-
-
-        <div class="inline-2">
-
-
-
-          <div>
-
-
-
-            <label>Perkiraan Gaya Laga</label>
-
-
-
-            <select id="match_style">
-
-
-
-              <option value="">Pilih style</option>
-              <option value="slow_control">Slow – Control / Positional</option>
-              <option value="balanced">Balanced Game</option>
-              <option value="fast_direct">Fast Direct</option>
-              <option value="transition_wild">Transition / Wild</option>
-
-            </select>
-          </div>
-
-          <div>
-            <label>Lingkungan Gol (perkiraan)</label>
-            <select id="goal_env">
-              <option value="">Pilih</option>
-              <option value="low">Low Scoring</option>
-              <option value="medium">Medium</option>
-              <option value="high">High Scoring</option>
-
-            </select>
-          </div>
-        </div>
-
-        <button id="btn_auto_tci">AUTO TEMPO / CHAOS / IMPORTANCE</button>
-       <small>Engine akan baca pressing, PPDA, form & match type untuk mengisi TCI secara otomatis.</small>
-      </div>
-
-      <!-- 6. Taktik & Fleksibilitas -->
-      <div class="section">
-        <h2>6. Taktik & Fleksibilitas</h2>
-
-        <h3>Formasi Potensial</h3>
-        <div class="inline-2">
-          <div>
-            <label>Formasi Home (1–3 opsi)</label>
-            <input id="home_form1" type="text" placeholder="4-3-3">
-            <input id="home_form2" type="text" placeholder="4-2-3-1 (opsional)">
-            <input id="home_form3" type="text" placeholder="3-4-3 (opsional)">
-          </div>
-          <div>
-            <label>Formasi Away (1–3 opsi)</label>
-            <input id="away_form1" type="text" placeholder="4-4-2">
-            <input id="away_form2" type="text" placeholder="4-3-3 (opsional)">
-            <input id="away_form3" type="text" placeholder="5-3-2 (opsional)">
-
-          </div>
-        </div>
-        <div class="inline-3">
-          <div>
-            <label>Fleksibilitas Taktik Home (0–10)</label>
-            <input id="home_flex" type="number" step="0.1" placeholder="5.0">
-          </div>
-
-          <div>
-            <label>Fleksibilitas Taktik Away (0–10)</label>
-            <input id="away_flex" type="number" step="0.1" placeholder="5.0">
-          </div>
-
-          <div>
-            <label>Match Plan (opsional)</label>
-            <select id="match_plan">
-              <option value="">Default</option>
-              <option value="home_attack">Home ingin dominan menyerang</option>
-              <option value="away_counter">Away fokus counter</option>
-              <option value="tight_tactical">Dua tim taktikal & hati-hati</option>
-
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <!-- 7. BRM & Info Bankroll (opsional) -->
-
-      <div class="section">
-        <h2>7. Bankroll & Profil Risiko (Opsional)</h2>
-
-        <div class="inline-3">
-          <div>
-            <label>Bankroll total</label>
-            <input id="bankroll" type="number" step="1" placeholder="contoh: 1000000">
-          </div>
-
-          <div>
-
-            <label>Profil Risiko</label>
-            <select id="risk_profile">
-              <option value="normal">Normal</option>
-              <option value="conservative">Conservative</option>
-              <option value="aggressive">Aggressive</option>
-
-            </select>
-          </div>
-
-          <div>
-
-            <label>Target Hit Rate (%) (opsional)</label>
-            <input id="target_hit" type="number" step="0.1" placeholder="55">
-
-          </div>
-        </div>
-
-        <small>Jika dikosongkan, BRM akan memakai asumsi normal & hanya memberi rekomendasi persentase.</small>
-      </div>
-
-      <!-- 8. Tombol Engine & Tools (semua didefinisikan di PART 2+) -->
-
-      <div class="section">
-        <h2>8. ENGINE & TOOLS</h2>
-        <h3>Auto & Pre-Processing</h3>
-       <button id="btn_auto_calc">AUTO-CALC INPUT WAJIB</button>
-        <button id="btn_auto_tci2">AUTO TCI (ALT)</button>
-        <button id="btn_sanitize">SANITIZE INPUT</button>
-
-
-        <hr class="line">
-   <h3>Engine Utama</h3>
-        <button id="btn_analyze">PRIME SINGULARITY ZERO</button>
-        <button id="btn_infinity">INFINITY ENGINE</button>
-        <button id="btn_grand_unified">GRAND UNIFIED ENGINE</button>
-
-        <hr class="line">
-        <h3>Analisis Lanjutan</h3>
-        <button id="btn_match_difficulty">MATCH DIFFICULTY</button>
-        <button id="btn_match_flow">MATCH FLOW</button>
-        <button id="btn_team_trend">TEAM TREND</button>
-        <button id="btn_set_piece">SET PIECE POWER</button>
-
-        <hr class="line">
-        <h3>BRM & PARLAY TOOLS</h3>
-        <button id="btn_brm_bankroll">BRM BANKROLL</button>
-        <button id="btn_brm_parlay">PARLAY HELPER</button>
-        <button id="btn_brm_edge">EDGE CLASSIFIER</button>
-        <button id="btn_brm_suite">RUN BRM SUITE</button>
-        <small>Seluruh fungsi tombol akan diisi di PART 2–7 (JavaScript) dengan engine yang rapi & tanpa error.</small>
-      </div>
     </div>
+</div>
 
 
-    <!-- ================= OUTPUT SIDE ================= -->
+<h2>🚀 TCI – Tempo / Chaos / Importance (Auto)</h2>
 
+<div class="card">
+    <div class="row">
 
+        <div class="col">
+            <label>Jenis Liga</label>
+            <select id="league_type">
+                <option>EPL</option>
+                <option>Bundesliga</option>
+                <option>La Liga</option>
+                <option>Serie A</option>
+                <option>Ligue 1</option>
+            </select>
 
-    <div class="layout-side">
-      <div class="section">
-        <h2>OUTPUT ANALISIS</h2>
-        <small>Semua hasil engine (Prime, Infinity, PPDA, BRM, dll.) akan muncul di sini.</small>
-        <textarea id="output" placeholder="Log analisis akan tampil di sini..."></textarea>
-        <button id="btn_clear_output">CLEAR OUTPUT</button>
+            <label>Jenis Pertandingan</label>
+            <select id="match_type">
+                <option>League Match</option>
+                <option>Derby</option>
+                <option>Cup</option>
+                <option>Knockout</option>
+                <option>Final</option>
+            </select>
+        </div>
 
-      </div>
+        <div class="col">
+            <label>TCI Tempo (Auto)</label>
+            <input id="tci_tempo" type="number" step="0.01" readonly>
+
+            <label>TCI Chaos (Auto)</label>
+            <input id="tci_chaos" type="number" step="0.01" readonly>
+
+            <label>TCI Importance (Auto)</label>
+            <input id="tci_importance" type="number" step="0.01" readonly>
+        </div>
+
+        <div class="col">
+            <button id="btnTCI">Hitung Auto TCI</button>
+        </div>
+
     </div>
-  </div>
+</div>
 
+<!-- ====================== PART B END ======================== -->
+<!-- ============================================================
+PREMIUM UI – PART C
+Momentum / Stability / Flexibility / Trend Analyzer
+=============================================================== -->
+
+<h2>📈 Momentum, Stability, Flexibility</h2>
+
+<div class="card">
+    <div class="row">
+
+        <!-- MOMENTUM -->
+        <div class="col">
+            <label>Momentum Home (1–10)</label>
+            <input id="home_mom" type="number" min="1" max="10" value="5">
+
+            <label>Momentum Away (1–10)</label>
+            <input id="away_mom" type="number" min="1" max="10" value="5">
+        </div>
+
+        <!-- STABILITY -->
+        <div class="col">
+            <label>Stability Home (1–10)</label>
+            <input id="home_st" type="number" min="1" max="10" value="5">
+
+            <label>Stability Away (1–10)</label>
+            <input id="away_st" type="number" min="1" max="10" value="5">
+        </div>
+
+        <!-- FLEXIBILITY -->
+        <div class="col">
+            <label>Flexibility Home (1–10)</label>
+            <input id="home_flex" type="number" min="1" max="10" value="5">
+
+            <label>Flexibility Away (1–10)</label>
+            <input id="away_flex" type="number" min="1" max="10" value="5">
+        </div>
+
+    </div>
+</div>
+
+
+<h2>🏟️ Home Advantage & Form Match</h2>
+
+<div class="card">
+    <div class="row">
+
+        <div class="col">
+            <label>Home Advantage (HA) – 1 sampai 10</label>
+            <input id="ha_value" type="number" min="1" max="10" value="5">
+        </div>
+
+        <div class="col">
+            <label>Form Home (Rata-rata 3–5 laga)</label>
+            <input id="form_home" type="number" step="0.01" value="0">
+
+            <label>Form Away (Rata-rata 3–5 laga)</label>
+            <input id="form_away" type="number" step="0.01" value="0">
+        </div>
+
+        <div class="col">
+            <button id="btn_trend">Hitung Trend Analyzer</button>
+        </div>
+
+    </div>
+</div>
+
+<!-- ====================== PART C END ======================== -->
+  <!-- ============================================================
+PREMIUM UI – PART D
+Difficulty / Flow / DIM / TCA / PIM / xT Engines
+=============================================================== -->
+
+<h2>🧠 Difficulty Rating & Flow Engine</h2>
+
+<div class="card">
+    <div class="row">
+
+        <!-- Difficulty Engine -->
+        <div class="col">
+            <label>Difficulty Base (1–10)</label>
+            <input id="diff_base" type="number" min="1" max="10" value="5">
+
+            <button id="btn_diff">Hitung Difficulty Rating</button>
+        </div>
+
+        <!-- Flow Engine -->
+        <div class="col">
+            <label>Flow Input Home (0–100)</label>
+            <input id="flow_home" type="number" min="0" max="100" value="50">
+
+            <label>Flow Input Away (0–100)</label>
+            <input id="flow_away" type="number" min="0" max="100" value="50">
+
+            <button id="btn_flow">Hitung Flow Engine</button>
+        </div>
+
+    </div>
+</div>
+
+
+<h2>🛰️ DIM / TCA / PIM – Tactical & Defensive Suite</h2>
+
+<div class="card">
+    <div class="row">
+
+        <div class="col">
+            <button id="btn_dim">Hitung DIM v2</button>
+        </div>
+
+        <div class="col">
+            <button id="btn_tca">Hitung TCA v2</button>
+        </div>
+
+        <div class="col">
+            <button id="btn_pim">Hitung PIM v2</button>
+        </div>
+
+    </div>
+</div>
+
+
+<h2>🎯 xT-lite & xT-MAX Engines</h2>
+
+<div class="card">
+    <div class="row">
+
+        <div class="col">
+            <button id="btn_xtlite">Hitung xT-lite v2</button>
+        </div>
+
+        <div class="col">
+            <button id="btn_xtmax">Hitung xT-MAX v1</button>
+        </div>
+
+        <div class="col">
+            <label>Set Piece Rating Home</label>
+            <input id="setpiece_home" type="number" min="1" max="10" value="5">
+
+            <label>Set Piece Rating Away</label>
+            <input id="setpiece_away" type="number" min="1" max="10" value="5">
+
+            <button id="btn_setp">Hitung Set Piece Strength</button>
+        </div>
+
+    </div>
+</div>
+
+<!-- ====================== PART D END ======================== -->
+  <!-- ============================================================
+PREMIUM UI – PART E
+Prime Engine / Hybrid / Swing / Chaos / Infinity + Output Panel
+=============================================================== -->
+
+<h2>🚀 Prime / Hybrid / Infinity Engine Controls</h2>
+
+<div class="card">
+
+    <div class="row">
+
+        <!-- PRIME ENGINE -->
+        <div class="col">
+            <button id="btn_analyze">🔷 Jalankan PRIME Engine</button>
+        </div>
+
+        <!-- HYBRID ENGINE -->
+        <div class="col">
+            <button id="btn_hybrid">🟩 Jalankan HYBRID Engine</button>
+        </div>
+
+        <!-- SWING REALITY -->
+        <div class="col">
+            <button id="btn_swing">🟪 Swing Reality</button>
+        </div>
+
+        <!-- CHAOS REALITY -->
+        <div class="col">
+            <button id="btn_chaos">🔴 Chaos Reality</button>
+        </div>
+
+        <!-- INFINITY ENGINE / GUN -->
+        <div class="col">
+            <button id="btn_grand_unified">🌌 Jalankan INFINITY Engine</button>
+        </div>
+
+        <!-- BRM ENGINE -->
+        <div class="col">
+            <button id="btn_brm">💰 BRM – Smart Staking</button>
+        </div>
+
+    </div>
+</div>
+
+
+<h2>📤 Output Analisis</h2>
+
+<div class="card">
+    <label>Hasil Analisis & Engine Log:</label>
+    <textarea id="analysis_output" style="width:100%; height:260px; border-radius:8px; padding:10px; border:1px solid #aaa; background:#fafafa;"></textarea>
+</div>
+
+<!-- ====================== PART E END ======================== -->
+  <!-- ============================================================
+PREMIUM UI – PART F (FINAL)
+Compatibility Layer + Button Binding + Auto TCI Display
+=============================================================== -->
+
+<script>
+/* ============================================================
+   FIX 1 — Sinkronisasi Input dengan Engine
+   Jika UI memakai ID berbeda, otomatis diganti agar cocok
+=============================================================== */
+PSZ.fixInput = function () {
+
+    function alias(target, source) {
+        const trg = document.getElementById(target);
+        if (trg) return;  // sudah ada → tidak perlu alias
+
+        const src = document.getElementById(source);
+        if (!src) return; // tidak ada di UI
+
+        src.id = target;
+        console.log("[Alias] " + source + " → " + target);
+    }
+
+    // PPDA
+    alias("ppda_home", "adv_ppda_home");
+    alias("ppda_away", "adv_ppda_away");
+
+    // Stability
+    alias("home_st", "home_stab");
+    alias("away_st", "away_stab");
+
+    // Error
+    alias("adv_err_home", "err_home");
+    alias("adv_err_away", "err_away");
+
+    // xGA
+    alias("adv_xga_home", "xga_home");
+    alias("adv_xga_away", "xga_away");
+
+    // Momentum
+    alias("home_mom", "momentum_home");
+    alias("away_mom", "momentum_away");
+
+    // Flexibility
+    alias("home_flex", "flex_home");
+    alias("away_flex", "flex_away");
+
+    // TCI Auto Fields
+    alias("tci_tempo", "tempo_value");
+    alias("tci_chaos", "chaos_value");
+    alias("tci_importance", "importance_value");
+
+    console.log("FIX INPUT: Semua ID input sudah sinkron.");
+};
+
+
+/* ============================================================
+   FIX 2 — Sinkronisasi Tombol UI dengan Engine
+   Semua tombol premium UI dihubungkan ke fungsi Part 1–7
+=============================================================== */
+PSZ.fixButtons = function () {
+
+    function bind(newID, fn) {
+        const el = document.getElementById(newID);
+        if (!el) return;
+        el.onclick = fn;
+        console.log("[Bind] Tombol:", newID);
+    }
+
+    // PRIME ENGINE
+    bind("btn_analyze", () => PSZ.primeEngine());
+
+    // HYBRID ENGINE
+    bind("btn_hybrid", () => PSZ.hybridEngine());
+    bind("btn_swing", () => PSZ.swingReality());
+    bind("btn_chaos", () => PSZ.chaosReality());
+
+    // INFINITY ENGINE
+    bind("btn_grand_unified", () => PSZ.infinityEngine());
+
+    // ANALYTICS
+    bind("btn_trend", () => PSZ.calcTrend());
+    bind("btn_diff",  () => PSZ.calcDifficulty());
+    bind("btn_flow",  () => PSZ.calcFlow());
+    bind("btn_setp",  () => PSZ.calcSetPiece());
+    bind("btn_brm",   () => PSZ.calcBRM());
+
+    // DIM / TCA / PIM / xT
+    bind("btn_dim",    () => PSZ.calcDIM());
+    bind("btn_tca",    () => PSZ.calcTCA());
+    bind("btn_pim",    () => PSZ.calcPIM());
+    bind("btn_xtlite", () => PSZ.calcXTLite());
+    bind("btn_xtmax",  () => PSZ.calcXTMax());
+
+    // TCI AUTO
+    bind("btnTCI", () => PSZ.autoTCI());
+
+};
+
+
+/* ============================================================
+   FIX 3 — TCI Auto Writer
+   Menampilkan nilai Tempo / Chaos / Importance ke UI
+=============================================================== */
+PSZ.showTCI = function () {
+    const tci = PSZ.state.tci_profile;
+    if (!tci) return;
+
+    function set(id, value) {
+        const el = document.getElementById(id);
+        if (el) el.value = value;
+    }
+
+    set("tci_tempo", tci.tempo.global);
+    set("tci_chaos", tci.chaos.global);
+    set("tci_importance", tci.importance);
+
+    console.log("TCI ditampilkan ke UI.");
+};
+
+// Override autoTCI agar selalu update UI
+const oldTCI = PSZ.autoTCI;
+PSZ.autoTCI = function () {
+    const result = oldTCI();
+    PSZ.showTCI();
+    return result;
+};
+
+
+/* ============================================================
+   Inisialisasi ketika halaman selesai dimuat
+=============================================================== */
+document.addEventListener("DOMContentLoaded", () => {
+    PSZ.fixInput();
+    PSZ.fixButtons();
+    console.log("UI Premium Compatibility Layer aktif.");
+});
+</script>
+
+</div> <!-- penutup .container utama -->
+
+<!-- ====================== PART F END ======================== -->
+  
 <!-- ============================================================
 PART 1 — CORE ENGINE + UTILITAS + AUTO TCI v8
 FINAL VERSION
