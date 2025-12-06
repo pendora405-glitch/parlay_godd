@@ -1,0 +1,1449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Match Simulation Engine — PRIME SINGULARITY ZERO ∑.REBUILD</title>
+
+<style>
+  body {
+    background:#050608;
+    color:#f5f5f5;
+    font-family:Arial, sans-serif;
+    padding:20px;
+  }
+  h1 {
+    font-size:26px;
+    margin-bottom:15px;
+    color:#7bf7ff;
+  }
+  h2 {
+    font-size:18px;
+    margin-bottom:8px;
+    color:#e2e2e2;
+  }
+  h3 {
+    font-size:14px;
+    margin:10px 0 5px;
+    color:#d0d0d0;
+  }
+  .section {
+    padding:12px 15px;
+    border:1px solid #444;
+    margin-bottom:15px;
+    border-radius:7px;
+    background:#131316;
+  }
+  label { 
+    display:block; 
+    margin-top:7px; 
+    font-size:13px;
+  }
+  input, select {
+    width:100%;
+    padding:6px;
+    margin-top:4px;
+    background:#202024;
+    border:1px solid #555;
+    color:#f2f2f2;
+    border-radius:5px;
+    font-size:13px;
+    box-sizing:border-box;
+  }
+  button {
+    padding:10px 15px;
+    background:#12b8e3;
+    color:#000;
+    border:none;
+    border-radius:6px;
+    cursor:pointer;
+    margin-top:12px;
+    font-weight:bold;
+  }
+  button:hover {
+    background:#18c9f5;
+  }
+  textarea {
+    width:100%;
+    height:360px;
+    background:#050506;
+    color:#00ff66;
+    padding:10px;
+    border:1px solid #333;
+    margin-top:10px;
+    border-radius:5px;
+    font-family:monospace;
+    font-size:12px;
+    white-space:pre;
+    box-sizing:border-box;
+  }
+  small {
+    color:#aaa;
+    font-size:11px;
+  }
+  .triple-input {
+    display:flex;
+    gap:6px;
+    margin-top:4px;
+  }
+  .triple-input input {
+    width:33.33%;
+  }
+  hr.line {
+    margin:12px 0;
+    border:0;
+    border-top:1px solid #333;
+  }
+</style>
+</head>
+
+<body>
+  <!-- =========================================== -->
+<!-- PART 1 — FULL INPUT PANEL (PSZ BASE REBUILD) -->
+<!-- =========================================== -->
+
+<div id="input_panel" class="panel">
+
+    <h2>⚽ Match Input — Prime Singularity Zero Base</h2>
+
+    <!-- ======================== -->
+    <!-- SECTION A : TEAM & MATCH -->
+    <!-- ======================== -->
+    <div class="card">
+        <label>Home Team</label>
+        <input id="home_team" type="text">
+
+        <label>Away Team</label>
+        <input id="away_team" type="text">
+
+        <label>Match Type</label>
+        <select id="match_type">
+            <option value="league">League</option>
+            <option value="cup">Cup</option>
+            <option value="continental">Continental</option>
+            <option value="derby">Derby</option>
+            <option value="relegation">Relegation</option>
+        </select>
+
+        <label>Match Importance (0–10)</label>
+        <input id="match_importance" type="number" min="0" max="10">
+    </div>
+
+    <!-- ======================== -->
+    <!-- SECTION B : XG / XGA -->
+    <!-- ======================== -->
+    <div class="card">
+        <label>Home xG</label>
+        <input id="home_xg" type="number" step="0.01">
+
+        <label>Away xG</label>
+        <input id="away_xg" type="number" step="0.01">
+
+        <label>Home xGA</label>
+        <input id="home_xga" type="number" step="0.01">
+
+        <label>Away xGA</label>
+        <input id="away_xga" type="number" step="0.01">
+    </div>
+
+    <!-- ======================== -->
+    <!-- SECTION C : DEFENSIVE    -->
+    <!-- ======================== -->
+    <div class="card">
+        <label>Home Defensive Error</label>
+        <input id="home_err" type="number" step="0.01">
+
+        <label>Away Defensive Error</label>
+        <input id="away_err" type="number" step="0.01">
+
+        <label>Home Stability</label>
+        <input id="home_stab" type="number" step="0.01">
+
+        <label>Away Stability</label>
+        <input id="away_stab" type="number" step="0.01">
+    </div>
+
+    <!-- ======================== -->
+    <!-- SECTION D : MOMENTUM -->
+    <!-- ======================== -->
+    <div class="card">
+        <label>Home Momentum (0–10)</label>
+        <input id="home_mom" type="number" min="0" max="10">
+
+        <label>Away Momentum (0–10)</label>
+        <input id="away_mom" type="number" min="0" max="10">
+    </div>
+
+    <!-- ======================== -->
+    <!-- SECTION E : PRESSING -->
+    <!-- ======================== -->
+    <div class="card">
+        <h3>Pressing Metrics</h3>
+
+        <label>PPDA Home</label>
+        <input id="ppda_home" type="number" step="0.01">
+
+        <label>PPDA Away</label>
+        <input id="ppda_away" type="number" step="0.01">
+
+        <label>Pressing Strength Home (0–10)</label>
+        <input id="home_press" type="number" min="0" max="10">
+
+        <label>Pressing Strength Away (0–10)</label>
+        <input id="away_press" type="number" min="0" max="10">
+    </div>
+
+    <!-- ============================== -->
+    <!-- SECTION F : TACKLE+INT+BLOCKS -->
+    <!-- ============================== -->
+    <div class="card">
+        <label>Home TKL+INT+Blocks</label>
+        <input id="home_tib" type="number">
+
+        <label>Away TKL+INT+Blocks</label>
+        <input id="away_tib" type="number">
+    </div>
+
+    <!-- ============================== -->
+    <!-- SECTION G : MARKET ODDS -->
+    <!-- ============================== -->
+    <div class="card">
+        <label>Odds Home</label>
+        <input id="odds_home" type="number" step="0.01">
+
+        <label>Odds Draw</label>
+        <input id="odds_draw" type="number" step="0.01">
+
+        <label>Odds Away</label>
+        <input id="odds_away" type="number" step="0.01">
+    </div>
+
+</div>
+
+<style>
+.panel {
+    max-width: 1150px;
+    margin: auto;
+    padding: 20px;
+    font-family: Arial;
+    color: white;
+}
+.card {
+    background: #121829;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    border: 1px solid #2a3a63;
+}
+label {
+    display: block;
+    margin-top: 5px;
+    font-size: 12px;
+    opacity: 0.9;
+}
+input, select {
+    width: 100%;
+    margin-top: 3px;
+    margin-bottom: 10px;
+    padding: 6px;
+    border-radius: 6px;
+    border: 1px solid #2c3e70;
+    background: #0c1224;
+    color: white;
+}
+          </style>
+          <!-- ========================================= -->
+<!-- PART 2 — CORE HELPER SYSTEM (FOUNDATION) -->
+<!-- ========================================= -->
+
+<script>
+// Namespace utama
+const PSZ = {};
+
+// ========== Helper Element Getter ==========
+PSZ.el = id => document.getElementById(id);
+
+// ========== Parse Number (aman dari NaN) ==========
+PSZ.num = id => {
+  const v = parseFloat(PSZ.el(id)?.value);
+  return isNaN(v) ? 0 : v;
+};
+
+// ========== Clamp (batasi nilai) ==========
+PSZ.clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
+// ========== Normalize 0–1 ==========
+PSZ.norm = (value, min, max) => {
+  if (max - min === 0) return 0;
+  return PSZ.clamp((value - min) / (max - min), 0, 1);
+};
+
+// ========== Safeguard: angka tidak boleh negatif ==========
+PSZ.nonNeg = x => (x < 0 ? 0 : x);
+
+// ========== Average dua nilai ==========
+PSZ.avg = (a, b) => (a + b) / 2;
+
+// ========== Weighted average ==========
+PSZ.wavg = (a, b, w = 0.5) => (a * w + b * (1 - w));
+
+// ========== Safe Divide ==========
+PSZ.safeDiv = (a, b, fallback = 0) => (b === 0 ? fallback : a / b);
+
+// ========== Format persen ==========
+PSZ.percentage = x => (x * 100).toFixed(1) + "%";
+
+// ========== Random kecil untuk variasi ==========
+PSZ.epsilon = () => (Math.random() - 0.5) * 0.01;
+
+// ========== Hitung “match load” untuk dinamika ==========
+PSZ.matchLoad = () => {
+  const momH = PSZ.num("home_mom");
+  const momA = PSZ.num("away_mom");
+  const stabH = PSZ.num("home_stab");
+  const stabA = PSZ.num("away_stab");
+
+  const momentumEffect = PSZ.avg(momH, momA);
+  const stabilityEffect = PSZ.avg(stabH, stabA);
+
+  return PSZ.clamp((momentumEffect * 0.6 + stabilityEffect * 0.4) / 10, 0, 1);
+};
+
+// ========== Compute Advantage (Home vs Away) ==========
+PSZ.computeAdv = () => {
+  const xgH = PSZ.num("home_xg");
+  const xgA = PSZ.num("away_xg");
+  const momH = PSZ.num("home_mom");
+  const momA = PSZ.num("away_mom");
+  const pressH = PSZ.num("home_press");
+  const pressA = PSZ.num("away_press");
+
+  const advXG = xgH - xgA;
+  const advMomentum = (momH - momA) * 0.1;
+  const advPress = (pressH - pressA) * 0.05;
+
+  return advXG + advMomentum + advPress;
+};
+
+// ========== Risk Level Detector ==========
+PSZ.riskLevel = () => {
+  const chaosH = PSZ.num("home_chaos");
+  const chaosA = PSZ.num("away_chaos");
+  const diff = Math.abs(chaosH - chaosA);
+
+  if (diff < 1) return "LOW";
+  if (diff < 3) return "MEDIUM";
+  return "HIGH";
+};
+
+// ========== Log Helper ==========
+PSZ.log = (title, data) => {
+  console.log("📌 " + title, data);
+};
+
+</script>
+<!-- ========================================= -->
+<!-- PART 3 — TCI ENGINE (Tempo / Chaos / Importance) -->
+<!-- ========================================= -->
+
+<script>
+PSZ.runTCI = () => {
+    // Ambil input dari UI
+    const tempoH = PSZ.num("home_tempo");
+    const tempoA = PSZ.num("away_tempo");
+    const chaosH = PSZ.num("home_chaos");
+    const chaosA = PSZ.num("away_chaos");
+    const imp = PSZ.num("match_importance");
+
+    // Normalisasi tempo (0–1)
+    const nTempoH = PSZ.norm(tempoH, 0, 10);
+    const nTempoA = PSZ.norm(tempoA, 0, 10);
+
+    // Normalisasi chaos (0–1)
+    const nChaosH = PSZ.norm(chaosH, 0, 10);
+    const nChaosA = PSZ.norm(chaosA, 0, 10);
+
+    // Normalisasi importance (0–1)
+    const nImp = PSZ.norm(imp, 0, 10);
+
+    // Rata-rata tempo & chaos
+    const avgTempo = PSZ.avg(nTempoH, nTempoA);
+    const avgChaos = PSZ.avg(nChaosH, nChaosA);
+
+    // Composite TCI Score
+    // Importance menurunkan chaos & meningkatkan tempo
+    const TCIcore =
+        (avgTempo * (0.55 + nImp * 0.25)) +
+        (avgChaos * (0.45 - nImp * 0.25));
+
+    const TCI = PSZ.clamp(TCIcore, 0, 1);
+
+    // Match Profile
+    let profile = "";
+    if (TCI < 0.28) profile = "SLOW – TIGHT";
+    else if (TCI < 0.55) profile = "BALANCED – CONTROLLED";
+    else profile = "FAST – CHAOTIC";
+
+    // Return structured data
+    const result = {
+        tempo_home: tempoH,
+        tempo_away: tempoA,
+        chaos_home: chaosH,
+        chaos_away: chaosA,
+        importance: imp,
+        TCI_value: TCI,
+        match_profile: profile
+    };
+
+    console.log("🔥 TCI ENGINE RESULT", result);
+    return result;
+};
+</script>
+<!-- ========================================= -->
+<!-- PART 4 — DYNAMIC xG ENGINE (v1 FINAL)    -->
+<!-- ========================================= -->
+
+<script>
+PSZ.dynamicXG = () => {
+    // Pastikan state container
+    PSZ.state = PSZ.state || {};
+
+    // Ambil xG & xGA basic
+    const xgH  = PSZ.num("home_xg");
+    const xgA  = PSZ.num("away_xg");
+    const xgaH = PSZ.num("home_xga");
+    const xgaA = PSZ.num("away_xga");
+
+    // Ambil momentum, pressing, error, stability
+    const momH   = PSZ.num("home_mom");
+    const momA   = PSZ.num("away_mom");
+    const stabH  = PSZ.num("home_stab");
+    const stabA  = PSZ.num("away_stab");
+    const errH   = PSZ.num("home_err");
+    const errA   = PSZ.num("away_err");
+    const pressH = PSZ.num("home_press");
+    const pressA = PSZ.num("away_press");
+
+    // Ambil TCI (Tempo / Chaos / Importance)
+    const tci = PSZ.runTCI();
+    const T   = tci.TCI_value || 0; // 0–1
+
+    // ---- Normalisasi faktor-faktor ----
+    const nMomH  = PSZ.norm(momH, 0, 10);
+    const nMomA  = PSZ.norm(momA, 0, 10);
+    const nErrH  = PSZ.norm(errH, 0, 10);
+    const nErrA  = PSZ.norm(errA, 0, 10);
+    const nStabH = PSZ.norm(stabH, 0, 10);
+    const nStabA = PSZ.norm(stabA, 0, 10);
+
+    // Pressing relatif (–1..1) lalu kecilkan
+    const relPressH = PSZ.clamp((pressH - 5) / 5, -1, 1);
+    const relPressA = PSZ.clamp((pressA - 5) / 5, -1, 1);
+
+    // ---- Tempo / Chaos effect (TCI) ----
+    // T sekitar 0–1, pusat 0.5 → offset –0.5..+0.5
+    const tempoChaosBoost = (T - 0.5) * 0.35; // sekitar -0.175..+0.175
+
+    // ---- Offense scaling Home / Away ----
+    // Kombinasi momentum, pressing, error, TCI
+    const offScaleH =
+        1
+        + tempoChaosBoost                      // pace match
+        + nMomH * 0.25                         // tim sedang “on”
+        + relPressH * 0.12                     // high press → tambah peluang
+        - nErrH * 0.15;                        // error besar → finishing kurang efisien
+
+    const offScaleA =
+        1
+        + tempoChaosBoost
+        + nMomA * 0.25
+        + relPressA * 0.12
+        - nErrA * 0.15;
+
+    // ---- Defense scaling (untuk xG yang diterima) ----
+    const defScaleH =
+        1
+        - nStabH * 0.20                        // stabil → lebih sulit ditembus
+        + nErrH * 0.20;                        // error → lebih mudah ditembus
+
+    const defScaleA =
+        1
+        - nStabA * 0.20
+        + nErrA * 0.20;
+
+    // Clamp skala agar tidak liar
+    const offH = PSZ.clamp(offScaleH, 0.65, 1.60);
+    const offA = PSZ.clamp(offScaleA, 0.65, 1.60);
+    const defH = PSZ.clamp(defScaleH, 0.65, 1.60);
+    const defA = PSZ.clamp(defScaleA, 0.65, 1.60);
+
+    // ---- Hitung xG dinamis ----
+    const dynXgH_raw = xgH * offH;
+    const dynXgA_raw = xgA * offA;
+
+    const dynConcedeH_raw = xgaH * defA;  // berapa xG yg mungkin diterima Home (dipengaruhi def Away)
+    const dynConcedeA_raw = xgaA * defH;  // kebalikannya
+
+    // Sedikit smoothing
+    const dynXgH       = Number(dynXgH_raw.toFixed(3));
+    const dynXgA       = Number(dynXgA_raw.toFixed(3));
+    const dynConcedeH  = Number(dynConcedeH_raw.toFixed(3));
+    const dynConcedeA  = Number(dynConcedeA_raw.toFixed(3));
+
+    // Simpan ke state agar engine lain tinggal pakai
+    PSZ.state.dynamicXG = {
+        input: {
+            xgH, xgA, xgaH, xgaA,
+            momH, momA, stabH, stabA,
+            errH, errA, pressH, pressA,
+            TCI: T
+        },
+        output: {
+            xg_home_attack: dynXgH,
+            xg_away_attack: dynXgA,
+            xg_home_concede: dynConcedeH,
+            xg_away_concede: dynConcedeA,
+            TCI: T
+        }
+    };
+
+    console.log("⚙️ Dynamic xG RESULT", PSZ.state.dynamicXG);
+    return PSZ.state.dynamicXG;
+};
+</script>
+<!-- ========================================= -->
+<!-- PART 5 — PRIME ENGINE (v4 FINAL)          -->
+<!-- ========================================= -->
+
+<script>
+PSZ.runPrime = () => {
+
+    // Pastikan dynamic xG sudah dihitung
+    const dxg = PSZ.dynamicXG().output;
+
+    const xH = dxg.xg_home_attack;    // xG menyerang Home
+    const xA = dxg.xg_away_attack;    // xG menyerang Away
+    const cH = dxg.xg_home_concede;   // xG yang mungkin diterima Home
+    const cA = dxg.xg_away_concede;   // xG yang mungkin diterima Away
+
+    // Rata-rata peluang mencetak gol
+    const goalH = PSZ.clamp((xH + cA) / 2, 0.01, 5);
+    const goalA = PSZ.clamp((xA + cH) / 2, 0.01, 5);
+
+    // -----------------------------
+    // POISSON DISTRIBUTION
+    // -----------------------------
+
+    const poisson = (lambda, k) => 
+        (Math.pow(lambda, k) * Math.exp(-lambda)) / PSZ.safeFactorial(k);
+
+    PSZ.safeFactorial = n => {
+        if (n < 0) return 1;
+        let f = 1;
+        for (let i = 1; i <= n; i++) f *= i;
+        return f;
+    };
+
+    // Hitung probabilitas 0–5 gol untuk masing-masing tim
+    const maxGoal = 5;
+    let probH = [];
+    let probA = [];
+
+    for (let i = 0; i <= maxGoal; i++) {
+        probH[i] = poisson(goalH, i);
+        probA[i] = poisson(goalA, i);
+    }
+
+    // ------------------------------
+    // COMPUTE 1X2 PROBABILITIES
+    // ------------------------------
+
+    let pHome = 0, pDraw = 0, pAway = 0;
+
+    for (let h = 0; h <= maxGoal; h++) {
+        for (let a = 0; a <= maxGoal; a++) {
+            const p = probH[h] * probA[a];
+            if (h > a) pHome += p;
+            else if (h === a) pDraw += p;
+            else pAway += p;
+        }
+    }
+
+    // Normalize
+    const total = pHome + pDraw + pAway;
+    pHome /= total;
+    pDraw /= total;
+    pAway /= total;
+
+    // Expected total goals
+    const expectedGoals = goalH + goalA;
+
+    const result = {
+        goal_home: Number(goalH.toFixed(3)),
+        goal_away: Number(goalA.toFixed(3)),
+        pHome: Number(pHome.toFixed(4)),
+        pDraw: Number(pDraw.toFixed(4)),
+        pAway: Number(pAway.toFixed(4)),
+        expected_goals: Number(expectedGoals.toFixed(3)),
+        dynamic_used: dxg
+    };
+
+    console.log("🔥 PRIME ENGINE RESULT", result);
+    return result;
+};
+</script>
+<!-- ========================================= -->
+<!-- PART 6 — HYBRID ENGINE (v3)              -->
+<!-- ========================================= -->
+
+<script>
+PSZ.runHybrid = () => {
+    PSZ.state = PSZ.state || {};
+
+    // Ambil hasil PRIME dan Dynamic xG
+    const prime = PSZ.runPrime();
+    const dxg   = PSZ.state.dynamicXG?.output || PSZ.dynamicXG().output;
+    const tci   = PSZ.runTCI();
+
+    // Data dari PRIME
+    const pGoalH = prime.goal_home;
+    const pGoalA = prime.goal_away;
+
+    // Data dari Dynamic xG
+    const dGoalH = dxg.xg_home_attack;
+    const dGoalA = dxg.xg_away_attack;
+
+    // Input lain
+    const momH   = PSZ.num("home_mom");
+    const momA   = PSZ.num("away_mom");
+    const stabH  = PSZ.num("home_stab");
+    const stabA  = PSZ.num("away_stab");
+    const errH   = PSZ.num("home_err");
+    const errA   = PSZ.num("away_err");
+    const pressH = PSZ.num("home_press");
+    const pressA = PSZ.num("away_press");
+
+    // Normalisasi beberapa faktor
+    const nMomDiff   = PSZ.clamp((momH - momA) / 10, -1, 1);
+    const nStabDiff  = PSZ.clamp((stabH - stabA) / 10, -1, 1);
+    const nErrDiff   = PSZ.clamp((errA - errH) / 10, -1, 1); // error lawan menguntungkan
+    const nPressDiff = PSZ.clamp((pressH - pressA) / 10, -1, 1);
+
+    // Tempo / Chaos
+    const T = tci.TCI_value || 0.5; // 0–1
+    const tempoBias = (T - 0.5) * 0.4; // -0.2..+0.2
+
+    // Bobot blending PRIME vs Dynamic
+    // Match makin cepat & chaotic → lebih condong ke Dynamic xG
+    const wDynamic = PSZ.clamp(0.3 + T * 0.4, 0.3, 0.7); // 0.3..0.7
+    const wPrime   = 1 - wDynamic;
+
+    // Hybrid base goals
+    let hGoalH = pGoalH * wPrime + dGoalH * wDynamic;
+    let hGoalA = pGoalA * wPrime + dGoalA * wDynamic;
+
+    // Adjust dengan faktor taktis
+    const adjHome =
+        nMomDiff * 0.25 +   // momentum
+        nStabDiff * 0.18 +  // stabilitas
+        nErrDiff  * 0.22 +  // error lawan
+        nPressDiff* 0.15 +  // pressing
+        tempoBias;          // tempo/chaos match
+
+    // Away kebalikan sebagian besar faktor
+    const adjAway =
+        -nMomDiff * 0.18 +
+        -nStabDiff * 0.20 +
+        -nPressDiff* 0.12 +
+        -tempoBias * 0.5;
+
+    hGoalH = PSZ.clamp(hGoalH + adjHome, 0.01, 6);
+    hGoalA = PSZ.clamp(hGoalA + adjAway, 0.01, 6);
+
+    // Tentukan style output
+    let style = "";
+    if (T < 0.3) style = "CONTROLLED / LOW CHAOS";
+    else if (T < 0.6) style = "BALANCED / MODERATE CHAOS";
+    else style = "HIGH TEMPO / HIGH CHAOS";
+
+    const hybridExpectedGoals = hGoalH + hGoalA;
+
+    const result = {
+        goal_home: Number(hGoalH.toFixed(3)),
+        goal_away: Number(hGoalA.toFixed(3)),
+        total_goals: Number(hybridExpectedGoals.toFixed(3)),
+        style,
+        blend_weight_prime: Number(wPrime.toFixed(3)),
+        blend_weight_dynamic: Number(wDynamic.toFixed(3)),
+        factors: {
+            momentum_diff: Number(nMomDiff.toFixed(3)),
+            stability_diff: Number(nStabDiff.toFixed(3)),
+            error_diff: Number(nErrDiff.toFixed(3)),
+            pressing_diff: Number(nPressDiff.toFixed(3)),
+            TCI: Number(T.toFixed(3))
+        }
+    };
+
+    console.log("🔀 HYBRID ENGINE RESULT", result);
+    PSZ.state.hybrid = result;
+    return result;
+};
+</script>
+<!-- ========================================= -->
+<!-- PART 7 — INFINITY ENGINE (Grand Unified v4) -->
+<!-- ========================================= -->
+
+<script>
+PSZ.runInfinity = () => {
+    PSZ.state = PSZ.state || {};
+
+    // Ambil hasil engine lain
+    const prime  = PSZ.runPrime();
+    const hybrid = PSZ.runHybrid();
+    const dxg    = PSZ.state.dynamicXG?.output || PSZ.dynamicXG().output;
+    const tci    = PSZ.runTCI();
+
+    // Ambil faktor dasar
+    const T = tci.TCI_value || 0.5;  
+
+    // ---- Weighting Infinity Engine ----
+    // Semakin chaos → lebih condong ke Hybrid
+    const wPrime   = PSZ.clamp(0.65 - T * 0.35, 0.3, 0.65);  // 0.30 – 0.65
+    const wHybrid  = 1 - wPrime;
+
+    // ---- Infinity Goal Prediction ----
+    const infGoalH = 
+        prime.goal_home  * wPrime +
+        hybrid.goal_home * wHybrid;
+
+    const infGoalA =
+        prime.goal_away  * wPrime +
+        hybrid.goal_away * wHybrid;
+
+    // ---- Dominance Index ----
+    // nilai + besar → home dominan
+    // nilai - besar → away dominan
+    const dominance =
+        (infGoalH - infGoalA) +
+        (hybrid.factors.momentum_diff * 0.8) +
+        (hybrid.factors.stability_diff * 0.5) +
+        ((dxg.xg_home_attack - dxg.xg_away_attack) * 0.6);
+
+    let dominanceType = "";
+    if (dominance > 0.9) dominanceType = "HOME STRONG";
+    else if (dominance > 0.3) dominanceType = "HOME EDGE";
+    else if (dominance > -0.3) dominanceType = "BALANCED";
+    else if (dominance > -0.9) dominanceType = "AWAY EDGE";
+    else dominanceType = "AWAY STRONG";
+
+    // ---- Risk Level Based on Chaos / Error ----
+    const avgErr = PSZ.avg(PSZ.num("home_err"), PSZ.num("away_err"));
+    const nErr = PSZ.norm(avgErr, 0, 10);
+
+    const chaosFactor = T;
+    const riskRaw = (chaosFactor * 0.6 + nErr * 0.4);
+
+    let riskLevel = "";
+    if (riskRaw < 0.30) riskLevel = "LOW RISK";
+    else if (riskRaw < 0.55) riskLevel = "MEDIUM RISK";
+    else riskLevel = "HIGH RISK";
+
+    // ---- Volatility (swing probability) ----
+    // peluang pertandingan menjadi unpredictable
+    const swing = PSZ.clamp(
+        (T * 0.5) + (nErr * 0.4) + (Math.abs(infGoalH - infGoalA) * 0.1),
+        0, 1
+    );
+
+    let swingType = "";
+    if (swing < 0.25) swingType = "STABLE MATCH";
+    else if (swing < 0.55) swingType = "NORMAL VOLATILITY";
+    else swingType = "CHAOTIC SWING";
+
+    // ---- Expected Total Goals ----
+    const totalGoals = infGoalH + infGoalA;
+
+    // Prepare output
+    const result = {
+        goal_home: Number(infGoalH.toFixed(3)),
+        goal_away: Number(infGoalA.toFixed(3)),
+        total_goals: Number(totalGoals.toFixed(3)),
+        weights: {
+            wPrime: Number(wPrime.toFixed(3)),
+            wHybrid: Number(wHybrid.toFixed(3))
+        },
+        dominance: {
+            value: Number(dominance.toFixed(3)),
+            type: dominanceType
+        },
+        risk: {
+            raw: Number(riskRaw.toFixed(3)),
+            level: riskLevel
+        },
+        swing: {
+            value: Number(swing.toFixed(3)),
+            type: swingType
+        },
+        TCI: Number(T.toFixed(3))
+    };
+
+    console.log("🌀 INFINITY ENGINE RESULT", result);
+    PSZ.state.infinity = result;
+
+    return result;
+};
+</script>
+<!-- ========================================= -->
+<!-- PART 8 — OU HEAT ENGINE                  -->
+<!-- ========================================= -->
+
+<script>
+PSZ.runOUHeat = () => {
+    PSZ.state = PSZ.state || {};
+
+    // Pastikan engine lain sudah jalan
+    const prime    = PSZ.runPrime();
+    const hybrid   = PSZ.runHybrid();
+    const infinity = PSZ.runInfinity();
+    const tci      = PSZ.runTCI();
+
+    // Ambil total goals dari tiap engine
+    const totalPrime  = prime.expected_goals;
+    const totalHybrid = hybrid.total_goals;
+    const totalInf    = infinity.total_goals;
+
+    // Gabungkan total goals
+    const baseTotalGoals = (totalPrime * 0.3 + totalHybrid * 0.3 + totalInf * 0.4);
+
+    // Variabel tambahan: error & chaos
+    const errH = PSZ.num("home_err");
+    const errA = PSZ.num("away_err");
+    const avgErr = PSZ.avg(errH, errA);
+    const nErr = PSZ.norm(avgErr, 0, 10);
+
+    const T = tci.TCI_value || 0.5; // 0–1
+    const chaosBoost = (T - 0.5) * 0.9; // -0.45..+0.45
+
+    // OU modifier
+    const ouRaw = baseTotalGoals + chaosBoost + nErr * 0.5;
+    const ouGoals = PSZ.clamp(ouRaw, 0.5, 6.0);
+
+    // Tentukan garis OU utama
+    let line = 2.5;
+    if (ouGoals < 2.1) line = 2.0;
+    else if (ouGoals < 2.6) line = 2.5;
+    else if (ouGoals < 3.1) line = 3.0;
+    else line = 3.5;
+
+    // Approx Over / Under probability (sederhana)
+    const diff = ouGoals - line;
+    // diff positif → condong Over
+    // diff negatif → condong Under
+    let pOver = 0.50 + diff * 0.12; 
+    pOver = PSZ.clamp(pOver, 0.05, 0.95);
+    const pUnder = 1 - pOver;
+
+    // BTTS probabilistic approximation
+    // pakai Infinity goals + sedikit chaos
+    const gH = infinity.goal_home;
+    const gA = infinity.goal_away;
+    const baseBTTS = PSZ.clamp((gH > 0.6 && gA > 0.6) ? 0.65 : 0.45, 0.35, 0.8);
+    const chaosBTTS = (T - 0.5) * 0.2;
+    let pBTTS = PSZ.clamp(baseBTTS + chaosBTTS, 0.05, 0.95);
+
+    // Heat label
+    let heatLabel = "";
+    if (ouGoals < 2.0) heatLabel = "COLD – LOW SCORING TENDENCY";
+    else if (ouGoals < 2.6) heatLabel = "WARM – MODERATE GOALS";
+    else if (ouGoals < 3.3) heatLabel = "HOT – HIGH GOAL POTENTIAL";
+    else heatLabel = "BLAZING – VERY HIGH GOAL POTENTIAL";
+
+    const result = {
+        ou_model_goals: Number(ouGoals.toFixed(3)),
+        main_line: line,
+        pOver: Number(pOver.toFixed(4)),
+        pUnder: Number(pUnder.toFixed(4)),
+        pBTTS: Number(pBTTS.toFixed(4)),
+        heat: heatLabel,
+        base: {
+            total_prime: Number(totalPrime.toFixed(3)),
+            total_hybrid: Number(totalHybrid.toFixed(3)),
+            total_infinity: Number(totalInf.toFixed(3)),
+            avg_error: Number(avgErr.toFixed(3)),
+            chaos: Number(T.toFixed(3))
+        }
+    };
+
+    console.log("🔥 OU HEAT ENGINE RESULT", result);
+    PSZ.state.ouHeat = result;
+    return result;
+};
+</script>
+<!-- ========================================= -->
+<!-- PART 9 — CORRECT SCORE GRID (v2)         -->
+<!-- ========================================= -->
+
+<script>
+PSZ.runScoreGrid = () => {
+    PSZ.state = PSZ.state || {};
+
+    // Pastikan engine utama sudah jalan
+    const prime    = PSZ.runPrime();
+    const infinity = PSZ.runInfinity();
+
+    // Ambil prediksi gol dari PRIME & INFINITY lalu blend
+    const gH_prime = prime.goal_home;
+    const gA_prime = prime.goal_away;
+    const gH_inf   = infinity.goal_home;
+    const gA_inf   = infinity.goal_away;
+
+    // Infinity sedikit lebih berat (karena sudah gabung Hybrid)
+    const lambdaH = PSZ.clamp(gH_prime * 0.4 + gH_inf * 0.6, 0.01, 6);
+    const lambdaA = PSZ.clamp(gA_prime * 0.4 + gA_inf * 0.6, 0.01, 6);
+
+    // Poisson helper (gunakan factorial yang aman)
+    const factorial = n => {
+        if (n < 0) return 1;
+        let f = 1;
+        for (let i = 1; i <= n; i++) f *= i;
+        return f;
+    };
+    const poisson = (lambda, k) =>
+        (Math.pow(lambda, k) * Math.exp(-lambda)) / factorial(k);
+
+    const maxGoal = 5;
+    const grid = [];
+    let best = { h: 0, a: 0, p: -1 };
+    let second = { h: 0, a: 0, p: -1 };
+
+    let sumAll = 0;
+    let total0_1 = 0;
+    let total2_3 = 0;
+    let total4plus = 0;
+
+    for (let h = 0; h <= maxGoal; h++) {
+        grid[h] = [];
+        const pH = poisson(lambdaH, h);
+        for (let a = 0; a <= maxGoal; a++) {
+            const pA = poisson(lambdaA, a);
+            const p = pH * pA;
+            grid[h][a] = p;
+            sumAll += p;
+
+            // Kategori total gol
+            const tg = h + a;
+            if (tg <= 1) total0_1 += p;
+            else if (tg <= 3) total2_3 += p;
+            else total4plus += p;
+
+            // Cari best & second
+            if (p > best.p) {
+                second = { ...best };
+                best = { h, a, p };
+            } else if (p > second.p) {
+                second = { h, a, p };
+            }
+        }
+    }
+
+    // Normalisasi total range
+    if (sumAll === 0) sumAll = 1;
+    total0_1 /= sumAll;
+    total2_3 /= sumAll;
+    total4plus /= sumAll;
+
+    const result = {
+        lambda_home: Number(lambdaH.toFixed(3)),
+        lambda_away: Number(lambdaA.toFixed(3)),
+        best_score: {
+            home: best.h,
+            away: best.a,
+            prob: Number((best.p / sumAll).toFixed(4))
+        },
+        second_best_score: {
+            home: second.h,
+            away: second.a,
+            prob: Number((second.p / sumAll).toFixed(4))
+        },
+        goal_bands: {
+            "0-1_goals": Number(total0_1.toFixed(4)),
+            "2-3_goals": Number(total2_3.toFixed(4)),
+            "4+_goals": Number(total4plus.toFixed(4))
+        },
+        grid_raw: grid  // bisa dipakai kalau mau tampilkan tabel
+    };
+
+    console.log("📊 SCORE GRID RESULT", result);
+    PSZ.state.scoreGrid = result;
+    return result;
+};
+</script>
+<!-- ========================================= -->
+<!-- PART 10 — GOD MODE LAYER                 -->
+<!--  A. Composite Model                      -->
+<!--  B. Confidence Index                     -->
+<!--  C. Market Edge Analyzer                 -->
+<!-- ========================================= -->
+
+<script>
+PSZ.runComposite = () => {
+    PSZ.state = PSZ.state || {};
+
+    // Ambil engine lain
+    const prime    = PSZ.runPrime();
+    const hybrid   = PSZ.runHybrid();
+    const infinity = PSZ.runInfinity();
+    const ou       = PSZ.runOUHeat();
+    const grid     = PSZ.runScoreGrid();
+    const tci      = PSZ.runTCI();
+
+    // ----------------------------------------
+    // A. COMPOSITE BLENDING
+    // ----------------------------------------
+    // Bobot dasar
+    let wPrime   = 0.25;
+    let wHybrid  = 0.35;
+    let wInf     = 0.40;
+
+    // Influence TCI (tempo/chaos)
+    const T = tci.TCI_value || 0.5;
+
+    // Chaos → lebih berat Hybrid & Infinity
+    wPrime  = PSZ.clamp(wPrime  - T * 0.15, 0.10, 0.30);
+    wHybrid = PSZ.clamp(wHybrid + T * 0.10, 0.20, 0.45);
+    wInf    = PSZ.clamp(wInf    + T * 0.05, 0.30, 0.50);
+
+    // Normalize
+    const wSum = wPrime + wHybrid + wInf;
+    wPrime  /= wSum;
+    wHybrid /= wSum;
+    wInf    /= wSum;
+
+    // Hitung prediksi komposit
+    const cGH = 
+        prime.goal_home  * wPrime +
+        hybrid.goal_home * wHybrid +
+        infinity.goal_home * wInf;
+
+    const cGA =
+        prime.goal_away  * wPrime +
+        hybrid.goal_away * wHybrid +
+        infinity.goal_away * wInf;
+
+    const cTG = cGH + cGA;
+
+    // ----------------------------------------
+    // B. CONFIDENCE INDEX
+    // ----------------------------------------
+    // Gunakan:
+    // - selisih prediksi engine
+    // - swing probability
+    // - agree/disagree antar engine
+    const diffPH = Math.abs(prime.goal_home  - hybrid.goal_home);
+    const diffPA = Math.abs(prime.goal_away  - hybrid.goal_away);
+    const diffIH = Math.abs(infinity.goal_home - hybrid.goal_home);
+    const diffIA = Math.abs(infinity.goal_away - hybrid.goal_away);
+
+    const avgDiff = PSZ.avg(diffPH + diffPA, diffIH + diffIA);
+
+    const swing = PSZ.state.infinity.swing.value;
+    const risk  = PSZ.state.infinity.risk.raw;
+
+    // Confidence menurun saat chaos tinggi
+    let confidence =
+        1.0
+        - avgDiff * 0.35
+        - swing * 0.35
+        - risk  * 0.25;
+
+    confidence = PSZ.clamp(confidence, 0, 1);
+
+    let confLabel = "";
+    if (confidence >= 0.70) confLabel = "HIGH CONFIDENCE";
+    else if (confidence >= 0.45) confLabel = "MODERATE CONFIDENCE";
+    else confLabel = "LOW CONFIDENCE";
+
+    // ----------------------------------------
+    // C. MARKET EDGE ANALYZER
+    // ----------------------------------------
+    const oh = PSZ.num("odds_home");
+    const od = PSZ.num("odds_draw");
+    const oa = PSZ.num("odds_away");
+
+    const ph = prime.pHome;
+    const pd = prime.pDraw;
+    const pa = prime.pAway;
+
+    // implied probability
+    const impH = oh ? 1 / oh : 0;
+    const impD = od ? 1 / od : 0;
+    const impA = oa ? 1 / oa : 0;
+    const impSum = impH + impD + impA;
+    
+    // Normalize
+    const impHN = impH / impSum;
+    const impDN = impD / impSum;
+    const impAN = impA / impSum;
+
+    // Edge = ModelProb - MarketProb
+    const edgeH = ph - impHN;
+    const edgeD = pd - impDN;
+    const edgeA = pa - impAN;
+
+    const edgePack = [
+        { type: "HOME", edge: edgeH },
+        { type: "DRAW", edge: edgeD },
+        { type: "AWAY", edge: edgeA }
+    ];
+
+    edgePack.sort((a,b) => b.edge - a.edge); 
+
+    const topEdge = edgePack[0];
+
+    // ----------------------------------------
+    // Final result
+    // ----------------------------------------
+
+    const result = {
+        composite_goals: {
+            home: Number(cGH.toFixed(3)),
+            away: Number(cGA.toFixed(3)),
+            total: Number(cTG.toFixed(3))
+        },
+        weights: {
+            prime: Number(wPrime.toFixed(3)),
+            hybrid: Number(wHybrid.toFixed(3)),
+            infinity: Number(wInf.toFixed(3))
+        },
+        confidence: {
+            value: Number(confidence.toFixed(3)),
+            label: confLabel
+        },
+        market_edge: {
+            best: {
+                type: topEdge.type,
+                value: Number(topEdge.edge.toFixed(4))
+            },
+            detailed: {
+                home: Number(edgeH.toFixed(4)),
+                draw: Number(edgeD.toFixed(4)),
+                away: Number(edgeA.toFixed(4))
+            }
+        },
+        assist: {
+            ou_heat: ou.heat,
+            score_best: grid.best_score,
+            score_second: grid.second_best_score,
+            tci: tci.match_profile
+        }
+    };
+
+    console.log("🟣 GOD MODE — COMPOSITE RESULT", result);
+    PSZ.state.composite = result;
+    return result;
+};
+</script>
+<!-- ========================================= -->
+<!-- PART 11 — PARLAY AI BUILDER               -->
+<!-- SAFE / BALANCED / HIGH RISK              -->
+<!-- ========================================= -->
+
+<script>
+PSZ.runParlayAI = () => {
+    PSZ.state = PSZ.state || {};
+
+    // Pastikan engine utama sudah dijalankan
+    const prime     = PSZ.runPrime();
+    const hybrid    = PSZ.runHybrid();
+    const infinity  = PSZ.runInfinity();
+    const ou        = PSZ.runOUHeat();
+    const grid      = PSZ.runScoreGrid();
+    const composite = PSZ.runComposite();
+
+    const homeTeam = (PSZ.el("home_team")?.value || "HOME").toUpperCase();
+    const awayTeam = (PSZ.el("away_team")?.value || "AWAY").toUpperCase();
+
+    // -----------------------------
+    // Helper: Label 1X2 dominant
+    // -----------------------------
+    const pH = prime.pHome;
+    const pD = prime.pDraw;
+    const pA = prime.pAway;
+
+    let main1x2 = "DRAW";
+    let mainProb = pD;
+    if (pH >= pD && pH >= pA) {
+        main1x2 = "HOME";
+        mainProb = pH;
+    } else if (pA >= pD && pA >= pH) {
+        main1x2 = "AWAY";
+        mainProb = pA;
+    }
+
+    // -----------------------------
+    // SAFE LEG SUGGESTIONS
+    // -----------------------------
+    const safeLegs = [];
+
+    // 1) Double chance arah dominan jika confidence cukup tinggi
+    if (composite.confidence.value >= 0.55) {
+        if (main1x2 === "HOME") {
+            safeLegs.push({
+                type: "1X",
+                label: `${homeTeam} or Draw`,
+                reason: "Model dominan ke Home, tapi diamankan dengan 1X."
+            });
+        } else if (main1x2 === "AWAY") {
+            safeLegs.push({
+                type: "X2",
+                label: `${awayTeam} or Draw`,
+                reason: "Model dominan ke Away, tapi diamankan dengan X2."
+            });
+        } else {
+            safeLegs.push({
+                type: "1X/ X2 FLEX",
+                label: "Mainkan sisi yang punya edge pasar terbesar (HOME atau AWAY)",
+                reason: "Model condong ke hasil seimbang, gunakan edge pasar."
+            });
+        }
+    }
+
+    // 2) OU garis utama jika OU Heat tidak ekstrem
+    if (ou.main_line && ou.ou_model_goals) {
+        const diff = ou.ou_model_goals - ou.main_line;
+        if (Math.abs(diff) < 0.25) {
+            // Model netral → hindari OU sebagai SAFE leg
+        } else if (diff > 0.25) {
+            safeLegs.push({
+                type: "OVER",
+                label: `Over ${ou.main_line}`,
+                reason: `Model cenderung di atas garis dengan heat: ${ou.heat}.`
+            });
+        } else if (diff < -0.25) {
+            safeLegs.push({
+                type: "UNDER",
+                label: `Under ${ou.main_line}`,
+                reason: `Model cenderung di bawah garis dengan heat: ${ou.heat}.`
+            });
+        }
+    }
+
+    // BTTS sebagai leg aman hanya jika peluang cukup tinggi
+    if (ou.pBTTS >= 0.60) {
+        safeLegs.push({
+            type: "BTTS YES",
+            label: "Both Teams To Score – YES",
+            reason: "Model menunjukkan peluang BTTS cukup tinggi."
+        });
+    }
+
+    // -----------------------------
+    // BALANCED LEG SUGGESTIONS
+    // -----------------------------
+    const balancedLegs = [];
+
+    // 1) 1X2 langsung mengikuti dominan
+    balancedLegs.push({
+        type: "1X2",
+        label: main1x2 === "HOME"
+            ? `${homeTeam} Win`
+            : main1x2 === "AWAY"
+                ? `${awayTeam} Win`
+                : "Draw",
+        reason: "Mengikuti probabilitas dominan berdasarkan Prime Engine."
+    });
+
+    // 2) OU sedikit lebih agresif
+    if (ou.ou_model_goals >= 2.4 && ou.ou_model_goals <= 3.3) {
+        balancedLegs.push({
+            type: "OVER/BALANCED",
+            label: `Over ${ou.main_line} (Balanced)`,
+            reason: "Total gol model di zona sedang cenderung ke Over."
+        });
+    }
+
+    if (ou.ou_model_goals <= 2.0) {
+        balancedLegs.push({
+            type: "UNDER/BALANCED",
+            label: `Under ${ou.main_line}`,
+            reason: "Model mengindikasikan total gol rendah."
+        });
+    }
+
+    // -----------------------------
+    // HIGH RISK LEG SUGGESTIONS
+    // -----------------------------
+    const riskLegs = [];
+
+    // 1) Correct Score utama
+    riskLegs.push({
+        type: "CORRECT SCORE",
+        label: `${grid.best_score.home} - ${grid.best_score.away}`,
+        reason: `Scoreline dengan probabilitas tertinggi menurut model.`
+    });
+
+    // 2) Correct Score kedua
+    riskLegs.push({
+        type: "CORRECT SCORE (ALT)",
+        label: `${grid.second_best_score.home} - ${grid.second_best_score.away}`,
+        reason: "Scoreline alternatif dengan probabilitas kedua tertinggi."
+    });
+
+    // 3) OU garis lebih tinggi (jika heat sangat panas)
+    if (ou.ou_model_goals >= 3.1) {
+        const altLine = ou.main_line + 0.5;
+        riskLegs.push({
+            type: "OVER HIGH LINE",
+            label: `Over ${altLine}`,
+            reason: "Pertandingan sangat panas (HOT/BLAZING), cocok untuk line lebih tinggi."
+        });
+    }
+
+    // 4) Side yang punya edge pasar tertinggi
+    const edge = composite.market_edge;
+    if (edge && edge.best && Math.abs(edge.best.value) > 0.02) {
+        riskLegs.push({
+            type: "VALUE SIDE",
+            label: `${edge.best.type} (Value Side)`,
+            reason: `Model vs Market menunjukkan edge terbesar pada sisi ${edge.best.type}.`
+        });
+    }
+
+    // -----------------------------
+    // Hasil akhir
+    // -----------------------------
+    const result = {
+        safe: safeLegs,
+        balanced: balancedLegs,
+        risky: riskLegs,
+        context: {
+            main1x2,
+            main1x2_prob: Number(mainProb.toFixed(3)),
+            confidence: composite.confidence,
+            ou: {
+                line: ou.main_line,
+                model_goals: ou.ou_model_goals,
+                heat: ou.heat,
+                pBTTS: ou.pBTTS
+            }
+        }
+    };
+
+    console.log("🧠 PARLAY AI RESULT", result);
+    PSZ.state.parlayAI = result;
+    return result;
+};
+</script>
+<!-- ========================================= -->
+<!-- PART 12 — BUTTON BINDING + OUTPUT FORMAT -->
+<!-- ========================================= -->
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+
+    // ===== Helper cetak ke output =====
+    const out = (txt) => {
+        const el = PSZ.el("analysis_output");
+        if (el) el.value = txt;
+    };
+
+    // ===== Output formatter utama =====
+    const formatOutput = () => {
+        const prime  = PSZ.runPrime();
+        const hybrid = PSZ.runHybrid();
+        const inf    = PSZ.runInfinity();
+        const ou     = PSZ.runOUHeat();
+        const grid   = PSZ.runScoreGrid();
+        const comp   = PSZ.runComposite();
+        const parlay = PSZ.runParlayAI();
+
+        let txt = "";
+
+        txt += "========== MATCH ANALYSIS ==========\n\n";
+
+        // ------------------ PRIME ------------------
+        txt += "🔵 PRIME ENGINE\n";
+        txt += `Home Goals: ${prime.goal_home}\n`;
+        txt += `Away Goals: ${prime.goal_away}\n`;
+        txt += `Prob Home: ${(prime.pHome*100).toFixed(1)}%\n`;
+        txt += `Prob Draw: ${(prime.pDraw*100).toFixed(1)}%\n`;
+        txt += `Prob Away: ${(prime.pAway*100).toFixed(1)}%\n`;
+        txt += `Expected Goals: ${prime.expected_goals}\n\n`;
+
+        // ------------------ HYBRID ------------------
+        txt += "🟣 HYBRID ENGINE\n";
+        txt += `Home Goals: ${hybrid.goal_home}\n`;
+        txt += `Away Goals: ${hybrid.goal_away}\n`;
+        txt += `Total Goals: ${hybrid.total_goals}\n`;
+        txt += `Style: ${hybrid.style}\n\n`;
+
+        // ------------------ INFINITY ------------------
+        txt += "🌀 INFINITY ENGINE (GRAND UNIFIED)\n";
+        txt += `Home Goals: ${inf.goal_home}\n`;
+        txt += `Away Goals: ${inf.goal_away}\n`;
+        txt += `Total Goals: ${inf.total_goals}\n`;
+        txt += `Dominance: ${inf.dominance.type} (${inf.dominance.value})\n`;
+        txt += `Risk Level: ${inf.risk.level}\n`;
+        txt += `Swing: ${inf.swing.type} (${inf.swing.value})\n\n`;
+
+        // ------------------ OU HEAT ------------------
+        txt += "🔥 OU HEAT ENGINE\n";
+        txt += `Model Goals: ${ou.ou_model_goals}\n`;
+        txt += `Main Line: ${ou.main_line}\n`;
+        txt += `Prob Over: ${(ou.pOver*100).toFixed(1)}%\n`;
+        txt += `Prob Under: ${(ou.pUnder*100).toFixed(1)}%\n`;
+        txt += `BTTS Yes: ${(ou.pBTTS*100).toFixed(1)}%\n`;
+        txt += `Heat: ${ou.heat}\n\n`;
+
+        // ------------------ SCORE GRID ------------------
+        txt += "📊 SCOREGRID (Correct Score)\n";
+        txt += `BEST: ${grid.best_score.home} - ${grid.best_score.away} (${(grid.best_score.prob*100).toFixed(2)}%)\n`;
+        txt += `ALT : ${grid.second_best_score.home} - ${grid.second_best_score.away} (${(grid.second_best_score.prob*100).toFixed(2)}%)\n`;
+        txt += `Bands: 0-1 goals = ${(grid.goal_bands["0-1_goals"]*100).toFixed(1)}%\n`;
+        txt += `       2-3 goals = ${(grid.goal_bands["2-3_goals"]*100).toFixed(1)}%\n`;
+        txt += `       4+ goals = ${(grid.goal_bands["4+_goals"]*100).toFixed(1)}%\n\n`;
+
+        // ------------------ COMPOSITE ------------------
+        txt += "🟡 COMPOSITE MODEL (GOD MODE)\n";
+        txt += `Composite Home: ${comp.composite_goals.home}\n`;
+        txt += `Composite Away: ${comp.composite_goals.away}\n`;
+        txt += `Composite Total: ${comp.composite_goals.total}\n`;
+        txt += `Confidence: ${comp.confidence.label} (${(comp.confidence.value*100).toFixed(1)}%)\n`;
+        txt += `Market Edge Best: ${comp.market_edge.best.type} (edge ${comp.market_edge.best.value})\n\n`;
+
+        // ------------------ PARLAY AI ------------------
+        txt += "🧠 PARLAY AI BUILDER\n\n";
+
+        txt += "-- SAFE PICKS --\n";
+        compTxt = "";
+        parlay.safe.forEach(e => { txt += `• ${e.label} (${e.reason})\n`; });
+        txt += "\n-- BALANCED PICKS --\n";
+        parlay.balanced.forEach(e => { txt += `• ${e.label} (${e.reason})\n`; });
+        txt += "\n-- HIGH RISK PICKS --\n";
+        parlay.risky.forEach(e => { txt += `• ${e.label} (${e.reason})\n`; });
+
+        out(txt);
+    };
+
+    // ====== Bind tombol ======
+    const bind = (id, fn) => {
+        const el = PSZ.el(id);
+        if (el) el.addEventListener("click", fn);
+    };
+
+    // Tombol utama
+    bind("btn_prime",   () => out(JSON.stringify(PSZ.runPrime(), null, 2)));
+    bind("btn_hybrid",  () => out(JSON.stringify(PSZ.runHybrid(), null, 2)));
+    bind("btn_infinity",() => out(JSON.stringify(PSZ.runInfinity(), null, 2)));
+    bind("btn_ou",      () => out(JSON.stringify(PSZ.runOUHeat(), null, 2)));
+    bind("btn_scoregrid", () => out(JSON.stringify(PSZ.runScoreGrid(), null, 2)));
+    bind("btn_composite", () => out(JSON.stringify(PSZ.runComposite(), null, 2)));
+    bind("btn_parlay", () => out(JSON.stringify(PSZ.runParlayAI(), null, 2)));
+
+    // Tombol FINAL PREDICTION
+    bind("btn_analyze_all", formatOutput);
+
+});
+</script>
+</body>
+</html>
