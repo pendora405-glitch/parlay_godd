@@ -383,7 +383,19 @@ Prime Engine / Hybrid / Swing / Chaos / Infinity + Output Panel
         <div class="col">
             <button id="btn_brm">💰 BRM – Smart Staking</button>
         </div>
-
+      <div class="col">
+    <button id="btn_matchstyle">🎨 Match Style Predictor</button>
+      </div>
+        <div class="col">
+    <button id="btn_scoregrid">📊 Score Grid</button>
+        </div>
+        <div class="col">
+    <button id="btn_matchdiff">🧩 Match Difficulty</button>
+            <div class="col">
+    <button id="btn_swing_momentum">🔄 Momentum Swing</button>
+            </div>
+        
+        </div>
     </div>
 </div>
 
@@ -489,12 +501,16 @@ PSZ.fixButtons = function () {
     bind("btn_pim",    () => PSZ.calcPIM());
     bind("btn_xtlite", () => PSZ.calcXTLite());
     bind("btn_xtmax",  () => PSZ.calcXTMax());
-
+    bind("btn_matchstyle", () => PSZ.matchStyle());
+    bind("btn_xtmax", () => PSZ.calcXTMax());
+    bind("btn_matchstyle", () => PSZ.matchStyle());
+    bind("btn_matchdiff", () => PSZ.matchDifficulty());
+    bind("btn_swing_momentum", () => PSZ.momentumSwing());
+    
     // TCI AUTO
     bind("btnTCI", () => PSZ.autoTCI());
 
 };
-
 
 /* ============================================================
    FIX 3 — TCI Auto Writer
@@ -917,129 +933,132 @@ PSZ.calcLambda = function(){
 
 </script>
 <!-- ============================================================
-PART 3 — PRIME ENGINE v3
-(Precision Grid 0–8 + Adaptive Draw Model + TCI Boost)
+PART 3 — PRIME ENGINE v4
 ============================================================== -->
-
 <script>
 
 PSZ.primeEngine = function () {
 
-    PSZ.log("=== PRIME ENGINE v3 START ===");
+    PSZ.log("=== PRIME ENGINE v4 START ===");
 
-    /* ------------------------------------------------------------
-       Ambil λ dari Part 2 (Lambda vNext)
-    ------------------------------------------------------------ */
+    /* -----------------------------------------
+       Ambil Lambda dasar (dari Part 2 vNext)
+    ------------------------------------------ */
     const base = PSZ.calcLambda();
+    if (!base) {
+        PSZ.log("ERROR: Lambda belum dihitung.");
+        return;
+    }
+
     let λH = base.lambda_home;
     let λA = base.lambda_away;
 
-    /* ------------------------------------------------------------
-       Ambil TCI v8 → tempo / chaos / importance
-    ------------------------------------------------------------ */
-    const tci = PSZ.state.tci_profile || {
-        tempo:{global:5},
-        chaos:{global:5},
-        importance:5
-    };
+    /* -----------------------------------------
+       DAP – Dynamic Attack Profile
+       Meningkatkan akurasi λ
+    ------------------------------------------ */
+    const mom = PSZ.state.trend || {home:5, away:5};
+    const stab = PSZ.state.dim  || {home:6, away:6};
+    const xt = PSZ.state.xtlite || {home:10, away:10};
+    const press = PSZ.getPressing();
 
-    const tempo = tci.tempo.global;
-    const chaos = tci.chaos.global;
-
-    /* ------------------------------------------------------------
-       BOOST λ dengan TCI
-       (lebih lembut daripada Chaos Engine)
-    ------------------------------------------------------------ */
-    function tciBoost(x){
-        return 1 + (x - 5) * 0.04;
+    function dapSide(λ, momVal, stabVal, pressVal, xtVal){
+        let val = λ;
+        val *= 1 + (momVal - 5) * 0.04;
+        val *= 1 - (stabVal - 6) * 0.04;
+        val *= 1 + (pressVal - 5) * 0.03;
+        val *= 1 + (xtVal - 10) * 0.015;
+        return val;
     }
 
-    λH *= tciBoost(tempo) * tciBoost(chaos);
-    λA *= tciBoost(tempo) * tciBoost(chaos);
+    λH = dapSide(λH, mom.home, stab.home, press.pressH, xt.home);
+    λA = dapSide(λA, mom.away, stab.away, press.pressA, xt.away);
 
-    /* ------------------------------------------------------------
-       Match Type — pengaruh draw
-    ------------------------------------------------------------ */
-    const matchType = (PSZ.el("match_type")?.value || "").toLowerCase();
+    /* -----------------------------------------
+       TCI Weighted Boost
+    ------------------------------------------ */
+    const tci = PSZ.state.tci_profile || {tempo:{global:5}, chaos:{global:5}, importance:5};
+
+    λH *= 1 + (tci.tempo.global - 5) * 0.03;
+    λA *= 1 + (tci.tempo.global - 5) * 0.03;
+
+    λH *= 1 + (tci.chaos.global - 5) * 0.02;
+    λA *= 1 + (tci.chaos.global - 5) * 0.02;
+
+    /* -----------------------------------------
+       Draw Adjustment v2
+    ------------------------------------------ */
     let drawBias = 1.0;
+    const matchType = (PSZ.el("match_type")?.value || "").toLowerCase();
 
-    if (matchType.includes("cup"))       drawBias = 1.05;
-    if (matchType.includes("knockout"))  drawBias = 1.10;
-    if (matchType.includes("final"))     drawBias = 1.15;
-    if (matchType.includes("derby"))     drawBias = 0.96;
+    if (matchType.includes("final"))       drawBias = 1.14;
+    else if (matchType.includes("cup"))   drawBias = 1.07;
+    else if (matchType.includes("derby")) drawBias = 1.10;
 
-    /* ------------------------------------------------------------
+    /* -----------------------------------------
        Clamp λ
-    ------------------------------------------------------------ */
-    function clamp(x){ return Math.max(0.15, Math.min(4.5, x)); }
+    ------------------------------------------ */
+    function clamp(x){ return Math.max(0.10, Math.min(5.0, x)); }
 
     λH = clamp(λH);
     λA = clamp(λA);
 
-    /* ------------------------------------------------------------
-       Fungsi Poisson
-    ------------------------------------------------------------ */
-    function pois(k,λ){
-        return Math.exp(-λ) * Math.pow(λ,k) / PSZ.factorial(k);
+    /* -----------------------------------------
+       Poisson Calculation
+    ------------------------------------------ */
+    function pois(k, λ) {
+        return Math.exp(-λ) * Math.pow(λ, k) / PSZ.factorial(k);
     }
 
-    /* ------------------------------------------------------------
-       Loop 0–8 precision grid
-    ------------------------------------------------------------ */
-    let homeP = 0, drawP = 0, awayP = 0;
-    let overP = 0, underP = 0;
+    let PH = 0, PD = 0, PA = 0;
+    let O25 = 0, U25 = 0;
 
-    for (let h = 0; h <= 8; h++){
-        for (let a = 0; a <= 8; a++){
+    for (let h=0; h<=8; h++){
+        for (let a=0; a<=8; a++){
+            let p = pois(h,λH) * pois(a,λA);
 
-            let p = pois(h, λH) * pois(a, λA);
+            if (h===a) p *= drawBias;
 
-            if (h === a) p *= drawBias;
+            if (h>a)  PH += p;
+            if (h<a)  PA += p;
+            if (h===a) PD += p;
 
-            if (h > a) homeP += p;
-            else if (h < a) awayP += p;
-            else drawP += p;
-
-            if (h + a >= 3) overP += p;
-            else underP += p;
+            if ((h+a)>=3) O25 += p;
+            else U25 += p;
         }
     }
 
-    /* ------------------------------------------------------------
-       Normalisasi 1X2
-    ------------------------------------------------------------ */
-    const sum = homeP + drawP + awayP;
+    const S = PH + PD + PA;
 
-    const nh = homeP / sum;
-    const nd = drawP / sum;
-    const na = awayP / sum;
-
-    /* ------------------------------------------------------------
-       Simpan hasil
-    ------------------------------------------------------------ */
-    PSZ.state.prime = {
+    const out = {
         lambda_home: λH,
         lambda_away: λA,
-        oneXtwo: {home:nh, draw:nd, away:na},
-        ou25: {over:overP, under:underP}
+        oneXtwo: {
+            home: PH/S,
+            draw: PD/S,
+            away: PA/S
+        },
+        ou25: {
+            over: O25,
+            under: U25
+        }
     };
 
-    PSZ.log("Prime v3 λH: "+λH.toFixed(3)+" | λA: "+λA.toFixed(3));
-    PSZ.log("Prime v3 1X2 → H:"+(nh*100).toFixed(2)+"% | D:"+(nd*100).toFixed(2)+"% | A:"+(na*100).toFixed(2)+"%");
-    PSZ.log("Prime v3 OU 2.5 → O:"+(overP*100).toFixed(2)+"% | U:"+(underP*100).toFixed(2)+"%");
-    PSZ.log("=== PRIME ENGINE v3 END ===\n");
+    PSZ.state.prime = out;
 
-    return PSZ.state.prime;
+    PSZ.log("Prime v4 Result → H:"+(out.oneXtwo.home*100).toFixed(2)+
+            " D:"+(out.oneXtwo.draw*100).toFixed(2)+
+            " A:"+(out.oneXtwo.away*100).toFixed(2)+"%");
+    PSZ.log("=== PRIME ENGINE v4 END ===\n");
+
+    return out;
 };
 
-
-/* ------------------------------------------------------------
-   Bind tombol Prime Engine
------------------------------------------------------------- */
-if (PSZ.el("btnPrime"))
-    PSZ.el("btnPrime").onclick = () => PSZ.primeEngine();
+if (PSZ.el("btn_analyze"))
+    PSZ.el("btn_analyze").onclick = () => PSZ.primeEngine();
 
 </script>
+    
 <!-- ============================================================
 PART 4 — HYBRID SUITE v3
 (Chaos v3 + Swing v3 + Hybrid Reality v3)
@@ -2028,6 +2047,209 @@ if (PSZ.el("btnXTMax"))
 PSZ.log("PART 7 Loaded: DIM v2, TCA v2, PIM v2, xT-lite v2, xT-MAX v1.");
 
 </script>
+    <!-- ============================================================
+PART 8A — MATCH STYLE PREDICTOR v1
+=============================================================== -->
+<script>
+
+PSZ.matchStyle = function () {
+
+    PSZ.log("=== MATCH STYLE PREDICTOR v1 START ===");
+
+    const tci = PSZ.state.tci_profile || {tempo:{global:5}, chaos:{global:5}, importance:5};
+    const flow = PSZ.state.flow || {home:50, away:50};
+    const press = PSZ.getPressing() || {pressH:5, pressA:5};
+    const mom = PSZ.state.trend || {home:5, away:5};
+    const dim = PSZ.state.dim || {home:6, away:6};
+
+    const prime = PSZ.state.prime;
+    let λgap = 0;
+
+    if (prime) {
+        λgap = Math.abs(prime.lambda_home - prime.lambda_away);
+    }
+
+    let style = "";
+
+    /* ===============================
+       RULE ENGINE
+    =============================== */
+
+    // 1. High Tempo Battle
+    if (tci.tempo.global >= 7 && (press.pressH >= 7 || press.pressA >= 7)) {
+        style = "🔥 High Tempo Battle – laga cepat, intens, kemungkinan banyak peluang.";
+    }
+
+    // 2. Transition Chaos Match
+    else if (tci.chaos.global >= 7 && λgap <= 0.6) {
+        style = "⚡ Transition Chaos Match – duel transisi, turnover cepat, potensi gol cepat.";
+    }
+
+    // 3. Defensive Slow Build
+    else if (tci.tempo.global <= 4 && press.pressH <= 5 && press.pressA <= 5) {
+        style = "🛡️ Defensive Slow Build – tempo lambat, kedua tim hati-hati.";
+    }
+
+    // 4. Low Block vs High Press
+    else if (press.pressH >= 7 && press.pressA <= 4) {
+        style = "📉 Low Block vs High Press – satu tim menekan keras, satu tim bertahan rapat.";
+    }
+    else if (press.pressA >= 7 && press.pressH <= 4) {
+        style = "📉 Low Block vs High Press – away agresif, home bertahan dalam.";
+    }
+
+    // 5. Momentum Dominated Match
+    else if (mom.home >= 7 || mom.away >= 7) {
+        style = "🔥 Momentum Dominated – tim dengan moment terbaik kontrol ritme.";
+    }
+
+    // 6. Balanced Tactical Match
+    else {
+        style = "⚖️ Balanced Tactical Match – permainan seimbang & terkendali.";
+    }
+
+    PSZ.state.matchStyle = style;
+    PSZ.log("Match Style → " + style);
+    PSZ.log("=== MATCH STYLE PREDICTOR END ===\n");
+
+    return style;
+};
+
+        </script>
+    <!-- ============================================================
+PART 8B — SCORE PROBABILITY GRID (0–4 × 0–4)
+Uses Poisson model from Prime Engine (λ Home & λ Away)
+=============================================================== -->
+<script>
+
+PSZ.scoreGrid = function () {
+
+    PSZ.log("=== SCORE GRID v1 START ===");
+
+    const prime = PSZ.state.prime;
+
+    if (!prime) {
+        PSZ.log("ERROR: Jalankan PRIME ENGINE dulu.");
+        return;
+    }
+
+    const λH = prime.lambda_home;
+    const λA = prime.lambda_away;
+
+    // Poisson Function
+    function pois(k, λ) {
+        return Math.exp(-λ) * Math.pow(λ, k) / PSZ.factorial(k);
+    }
+
+    let grid = [];
+    let txt = "\n=== SCORE PROBABILITY GRID (0–4 × 0–4) ===\n\n";
+
+    txt += "        0        1        2        3        4\n";
+    txt += "----------------------------------------------------\n";
+
+    for (let h = 0; h <= 4; h++) {
+        let row = [];
+        txt += `H${h} | `;
+
+        for (let a = 0; a <= 4; a++) {
+            const P = pois(h, λH) * pois(a, λA);
+            row.push(P);
+            txt += (P * 100).toFixed(2).padStart(6, " ") + "% ";
+        }
+
+        grid.push(row);
+        txt += "\n";
+    }
+
+    PSZ.state.scoreGrid = grid;
+
+    PSZ.log(txt);
+    PSZ.log("=== SCORE GRID v1 END ===\n");
+
+    return grid;
+};
+
+</script>
+    <!-- ============================================================
+PART 8C — COMBINED MATCH DIFFICULTY ENGINE v3
+=============================================================== -->
+<script>
+
+PSZ.matchDifficulty = function () {
+
+    PSZ.log("=== MATCH DIFFICULTY ENGINE v3 START ===");
+
+    const tci = PSZ.state.tci_profile || {importance:5};
+    const mom = PSZ.state.trend || {home:5, away:5};
+    const stab = PSZ.state.dim || {home:6, away:6};
+    const press = PSZ.getPressing() || {pressH:5, pressA:5};
+    const flow = PSZ.state.flow || {home:50, away:50};
+    const xt = PSZ.state.xtlite || {home:10, away:10};
+
+    const prime = PSZ.state.prime;
+    let λgap = 0;
+
+    if (prime) {
+        λgap = Math.abs(prime.lambda_home - prime.lambda_away);
+    }
+
+    /* ------------------------------------------------------------
+       Difficulty Score Calculation (0–100)
+    ------------------------------------------------------------ */
+    let score = 0;
+
+    // 1. Stability impact (lebih tidak stabil → lebih sulit)
+    score += (12 - stab.home) * 4;
+
+    // 2. Momentum (momentum kecil → match lebih sulit)
+    score += (10 - mom.home) * 3;
+
+    // 3. Pressing differential
+    score += Math.abs(press.pressA - press.pressH) * 2.5;
+
+    // 4. TCI Importance
+    score += tci.importance * 2;
+
+    // 5. xT difference (expected threat)
+    score += Math.abs(xt.home - xt.away) * 1.4;
+
+    // 6. Flow stability (semakin tidak seimbang → makin sulit)
+    score += Math.abs(flow.home - flow.away) * 0.25;
+
+    // 7. λ Prediction Gap (Prime confidence)
+    score += λgap * 12;
+
+    // 8. Cap score
+    if (score < 0) score = 0;
+    if (score > 100) score = 100;
+
+    /* ------------------------------------------------------------
+       Difficulty tier classification
+    ------------------------------------------------------------ */
+
+    let tier = "";
+
+    if (score <= 20)       tier = "🟢 Easy";
+    else if (score <= 40)  tier = "🟡 Balanced";
+    else if (score <= 60)  tier = "🟠 Hard";
+    else if (score <= 80)  tier = "🔴 Very Hard";
+    else                   tier = "⚫ Critical Match";
+
+    const result = {
+        difficulty_score: score,
+        difficulty_tier: tier
+    };
+
+    PSZ.state.difficulty = result;
+
+    PSZ.log("Difficulty Score → " + score.toFixed(1));
+    PSZ.log("Difficulty Tier  → " + tier);
+    PSZ.log("=== MATCH DIFFICULTY ENGINE END ===\n");
+
+    return result;
+};
+
+    </script>
 </body>
 </html>
 
