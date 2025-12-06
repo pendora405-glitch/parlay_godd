@@ -394,7 +394,12 @@ Prime Engine / Hybrid / Swing / Chaos / Infinity + Output Panel
             <div class="col">
     <button id="btn_swing_momentum">🔄 Momentum Swing</button>
             </div>
-        
+            <div class="col">
+        <button id="btn_dxg">📊 Hitung Dynamic xG</button>
+            </div>  
+            <div class="col">
+            <button id="btn_ou_heat">🔥 OU Heat Model</button>
+            </div>
         </div>
     </div>
 </div>
@@ -506,6 +511,8 @@ PSZ.fixButtons = function () {
     bind("btn_matchstyle", () => PSZ.matchStyle());
     bind("btn_matchdiff", () => PSZ.matchDifficulty());
     bind("btn_swing_momentum", () => PSZ.momentumSwing());
+    bind("btn_dxg", () => PSZ.dynamicXG());
+    bind("btn_ou_heat", () => PSZ.ouHeat());
     
     // TCI AUTO
     bind("btnTCI", () => PSZ.autoTCI());
@@ -2250,6 +2257,875 @@ PSZ.matchDifficulty = function () {
 };
 
     </script>
+    <!-- ============================================================
+PART 8D — MOMENTUM SWING INDICATOR v1
+=============================================================== -->
+<script>
+
+PSZ.momentumSwing = function () {
+
+    PSZ.log("=== MOMENTUM SWING INDICATOR v1 START ===");
+
+    const mom = PSZ.state.trend || {home:5, away:5};
+    const press = PSZ.getPressing() || {pressH:5, pressA:5};
+    const flow = PSZ.state.flow || {home:50, away:50};
+    const xt = PSZ.state.xtlite || {home:10, away:10};
+    const stab = PSZ.state.dim || {home:6, away:6};
+    const prime = PSZ.state.prime;
+
+    let λgap = 0;
+    if (prime) λgap = Math.abs(prime.lambda_home - prime.lambda_away);
+
+    /* ------------------------------------------------------------
+       Calculate Swing Score (0–100)
+    ------------------------------------------------------------ */
+
+    let score = 0;
+
+    // 1. Momentum gap – semakin besar selisih semakin besar swing
+    score += Math.abs(mom.home - mom.away) * 6;
+
+    // 2. Pressing delta
+    score += Math.abs(press.pressH - press.pressA) * 4;
+
+    // 3. xT difference (threat dominance)
+    score += Math.abs(xt.home - xt.away) * 2.5;
+
+    // 4. Flow stability (ketidakstabilan = swing tinggi)
+    score += Math.abs(flow.home - flow.away) * 0.25;
+
+    // 5. Stability (semakin tidak stabil → swing tinggi)
+    score += (12 - stab.home) * 2;
+
+    // 6. λ prediction gap (prediksi Prime)
+    score += λgap * 10;
+
+    // clamp
+    if (score > 100) score = 100;
+
+    /* ------------------------------------------------------------
+       Swing Type Classification
+    ------------------------------------------------------------ */
+    let type = "";
+
+    if (score >= 75) {
+        type = "🔄 HIGH Swing Potential — laga sangat mudah berubah arah.";
+    }
+    else if (score >= 55) {
+        type = "↔️ Medium Swing — kemungkinan momentum shift cukup besar.";
+    }
+    else if (mom.home > mom.away && press.pressH >= press.pressA + 2) {
+        type = "⬆️ Home Swing Advantage — potensi tekanan meningkat dari tuan rumah.";
+    }
+    else if (mom.away > mom.home && press.pressA >= press.pressH + 2) {
+        type = "⬇️ Away Swing Advantage — potensi perubahan momentum dari tim tamu.";
+    }
+    else {
+        type = "🧱 Low Swing — pertandingan cenderung stabil & terkontrol.";
+    }
+
+    const result = {
+        swing_score: score,
+        swing_type: type
+    };
+
+    PSZ.state.momentumSwing = result;
+
+    PSZ.log("Swing Score → " + score.toFixed(1));
+    PSZ.log("Swing Type  → " + type);
+    PSZ.log("=== MOMENTUM SWING INDICATOR END ===\n");
+
+    return result;
+};
+
+</script>
+    <!-- ============================================================
+PART 9 — PRESSING ENGINE PREMIUM v2
+PPDA → prioritas utama
+Pressing Style → fallback jika PPDA kosong
+=============================================================== -->
+<script>
+
+PSZ.getPressing = function () {
+
+    // Ambil input PPDA
+    const ppdaH = PSZ.num("adv_ppda_home");
+    const ppdaA = PSZ.num("adv_ppda_away");
+
+    // Ambil style pressing
+    const styleH = PSZ.val("press_style_home");
+    const styleA = PSZ.val("press_style_away");
+
+    // Mapping gaya pressing → angka
+    const map = {
+        "9": 9,   // Ultra High Press
+        "8": 8,   // Gegenpress / High Intensity
+        "7": 7,   // Semi High Press
+        "6": 6,   // Positional High
+        "5": 5,   // Balanced / Mid Block
+        "4": 4,   // Zonal Mid-Low
+        "3": 3,   // Deep Low Block
+        "2": 2,   // Ultra Compact
+        "1": 1    // Passive
+    };
+
+    // Fallback style → angka
+    const pressH = map[styleH] ?? 5;
+    const pressA = map[styleA] ?? 5;
+
+    let finalH = pressH;
+    let finalA = pressA;
+
+    // PPDA override jika valid
+    if (ppdaH > 0) finalH = PSZ.ppdaConvert(ppdaH);
+    if (ppdaA > 0) finalA = PSZ.ppdaConvert(ppdaA);
+
+    // Simpan state
+    PSZ.state.pressing = {
+        home: finalH,
+        away: finalA,
+        raw_ppda_home: ppdaH,
+        raw_ppda_away: ppdaA,
+        style_home: pressH,
+        style_away: pressA
+    };
+
+    return {
+        pressH: finalH,
+        pressA: finalA
+    };
+};
+
+
+// ============================================================
+// PPDA → pangkat terbalik (semakin kecil PPDA → pressing kuat)
+// ============================================================
+PSZ.ppdaConvert = function (ppda) {
+    if (!ppda || ppda <= 0) return 5;      // fallback aman
+    if (ppda > 40) return 1;               // sangat pasif
+    const val = 12 / ppda;                 // rumus umum PPDA Lite
+    return Math.min(9, Math.max(1, val));  // clamp
+};
+
+</script>
+    <!-- ============================================================
+PART 10 — TCI FUSION v9
+Menggabungkan Pressing, PPDA, Error, Momentum, Stability
+=============================================================== -->
+<script>
+
+// ==========================
+// PROFIL DASAR TCI
+// ==========================
+PSZ.autoTCI = function () {
+    const { pressH, pressA } = PSZ.getPressing();
+
+    // Ambil error defensif
+    const errH = PSZ.num("home_err");
+    const errA = PSZ.num("away_err");
+
+    // Ambil stability
+    const stabH = PSZ.num("home_stab");
+    const stabA = PSZ.num("away_stab");
+
+    // Ambil momentum
+    const momH = PSZ.num("home_mom");
+    const momA = PSZ.num("away_mom");
+
+    // Ambil match importance (skala 1–5)
+    const imp = PSZ.val("match_importance") || 3;
+
+    // ==========================
+    // TEMPO
+    // ==========================
+    let tempoH = (pressH * 0.8) + (momH * 0.5) - (stabH * 0.3);
+    let tempoA = (pressA * 0.8) + (momA * 0.5) - (stabA * 0.3);
+
+    // ==========================
+    // CHAOS
+    // ==========================
+    let chaosH = (errH * 0.7) + (pressH * 0.4) + (momH * 0.3);
+    let chaosA = (errA * 0.7) + (pressA * 0.4) + (momA * 0.3);
+
+    // ==========================
+    // IMPORTANCE
+    // ==========================
+    let importance = Number(imp);
+
+    // ==========================
+    // CLAMP NILAI
+    // ==========================
+    const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
+
+    tempoH = clamp(tempoH,1,10);
+    tempoA = clamp(tempoA,1,10);
+    chaosH = clamp(chaosH,1,10);
+    chaosA = clamp(chaosA,1,10);
+    importance = clamp(importance,1,5);
+
+    // ==========================
+    // SIMPAN STATE
+    // ==========================
+    PSZ.state.tci_profile = {
+        tempoH, tempoA,
+        chaosH, chaosA,
+        importance
+    };
+
+    // ==========================
+    // TAMPILKAN KE UI
+    // ==========================
+    PSZ.write("tci_tempo", ((tempoH + tempoA) / 2).toFixed(2));
+    PSZ.write("tci_chaos", ((chaosH + chaosA) / 2).toFixed(2));
+    PSZ.write("tci_importance", importance.toFixed(0));
+
+    return PSZ.state.tci_profile;
+};
+
+</script>
+    <!-- ============================================================
+PART 11 — MATCH STORY ENGINE v1 (Momentum Curve Engine)
+Menghasilkan profil alur pertandingan: Early–Mid–Late
+=============================================================== -->
+<script>
+
+PSZ.matchStory = function () {
+
+    // Ambil hasil TCI
+    const TCI = PSZ.state.tci_profile || {};
+    const tempoH = TCI.tempoH ?? 5;
+    const tempoA = TCI.tempoA ?? 5;
+    const chaosH = TCI.chaosH ?? 5;
+    const chaosA = TCI.chaosA ?? 5;
+
+    // Ambil pressing
+    const { pressH, pressA } = PSZ.getPressing();
+
+    // Momentum
+    const momH = PSZ.num("home_mom");
+    const momA = PSZ.num("away_mom");
+
+    // Stability & error
+    const stabH = PSZ.num("home_stab");
+    const stabA = PSZ.num("away_stab");
+    const errH  = PSZ.num("home_err");
+    const errA  = PSZ.num("away_err");
+
+    // ===============================
+    // EARLY GAME DOMINANCE
+    // ===============================
+    const earlyScoreH = tempoH + momH + pressH - stabH;
+    const earlyScoreA = tempoA + momA + pressA - stabA;
+
+    let early_dom = "Balanced";
+    if (earlyScoreH > earlyScoreA + 1.5) early_dom = "Home";
+    else if (earlyScoreA > earlyScoreH + 1.5) early_dom = "Away";
+
+    // ===============================
+    // MID GAME DOMINANCE
+    // ===============================
+    const midScoreH = (tempoH * 0.7) + (pressH * 0.6) + (momH * 0.4) - (errH * 0.3);
+    const midScoreA = (tempoA * 0.7) + (pressA * 0.6) + (momA * 0.4) - (errA * 0.3);
+
+    let mid_dom = "Balanced";
+    if (midScoreH > midScoreA + 1.2) mid_dom = "Home";
+    else if (midScoreA > midScoreH + 1.2) mid_dom = "Away";
+
+    // ===============================
+    // LATE GAME DOMINANCE
+    // ===============================
+    const lateScoreH = (momH * 0.7) + (errA * 0.4) - (stabH * 0.5);
+    const lateScoreA = (momA * 0.7) + (errH * 0.4) - (stabA * 0.5);
+
+    let late_dom = "Balanced";
+    if (lateScoreH > lateScoreA + 1.0) late_dom = "Home";
+    else if (lateScoreA > lateScoreH + 1.0) late_dom = "Away";
+
+    // ===============================
+    // AGGRESSION LEVEL & VOLATILITY
+    // ===============================
+    const aggression = Math.min(10, Math.max(1,
+        (pressH + pressA + tempoH + tempoA) / 4
+    ));
+
+    const volatility = Math.min(10, Math.max(1,
+        (chaosH + chaosA + errH + errA) / 4
+    ));
+
+    // Simpan hasil
+    PSZ.state.match_story = {
+        early_dom,
+        mid_dom,
+        late_dom,
+        aggression,
+        volatility
+    };
+
+    // Tampilkan di UI jika ada tempatnya
+    PSZ.to("match_story_output", `
+        <b>Early Game:</b> ${early_dom}<br>
+        <b>Mid Game:</b> ${mid_dom}<br>
+        <b>Late Game:</b> ${late_dom}<br>
+        <b>Aggression:</b> ${aggression.toFixed(1)}<br>
+        <b>Volatility:</b> ${volatility.toFixed(1)}
+    `);
+
+    return PSZ.state.match_story;
+};
+
+</script>
+    <!-- ============================================================
+PART 12 — SCENARIO PROBABILITY ENGINE v1
+Probabilitas gol per window waktu berdasarkan TCI + Story Engine
+=============================================================== -->
+<script>
+
+PSZ.goalWindow = function () {
+
+    const TCI = PSZ.state.tci_profile || {};
+    const STORY = PSZ.state.match_story || {};
+
+    const tempo = (TCI.tempoH + TCI.tempoA) / 2;
+    const chaos = (TCI.chaosH + TCI.chaosA) / 2;
+
+    const { pressH, pressA } = PSZ.getPressing();
+
+    const momH = PSZ.num("home_mom");
+    const momA = PSZ.num("away_mom");
+
+    const errH = PSZ.num("home_err");
+    const errA = PSZ.num("away_err");
+
+    const stabH = PSZ.num("home_stab");
+    const stabA = PSZ.num("away_stab");
+
+    // Utility clamp
+    const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+
+    // -----------------------------------------------
+    // BASE AGGRESSION INDEX
+    // -----------------------------------------------
+    const aggression = clamp((pressH + pressA + tempo) / 3, 1, 10);
+    const volatility = clamp((chaos + errH + errA) / 3, 1, 10);
+
+    // -----------------------------------------------
+    // WINDOW FACTORS (menit)
+    // -----------------------------------------------
+    const windows = [
+        { name: "0–15",   factor: 1.10, dom: STORY.early_dom },
+        { name: "15–30",  factor: 1.00, dom: STORY.early_dom },
+        { name: "30–45",  factor: 0.95, dom: STORY.mid_dom },
+        { name: "45–60",  factor: 1.05, dom: STORY.mid_dom },
+        { name: "60–75",  factor: 1.15, dom: STORY.late_dom },
+        { name: "75–90",  factor: 1.30, dom: STORY.late_dom }
+    ];
+
+    let results = [];
+
+    windows.forEach(w => {
+
+        // Dominasi berdasarkan match story
+        let domH = 1, domA = 1;
+
+        if (w.dom === "Home") domH = 1.25;
+        if (w.dom === "Away") domA = 1.25;
+
+        // Home score index
+        const Hscore =
+            (tempo * 0.4) +
+            (momH * 0.4) +
+            (pressH * 0.3) +
+            (volatility * 0.2) -
+            (stabH * 0.2);
+
+        // Away score index
+        const Ascore =
+            (tempo * 0.35) +
+            (momA * 0.4) +
+            (pressA * 0.3) +
+            (volatility * 0.2) -
+            (stabA * 0.2);
+
+        // Probabilitas final
+        const pHome = clamp(Hscore * w.factor * domH * 1.5, 1, 90);
+        const pAway = clamp(Ascore * w.factor * domA * 1.5, 1, 90);
+
+        results.push({
+            window: w.name,
+            home: Number(pHome.toFixed(1)),
+            away: Number(pAway.toFixed(1))
+        });
+    });
+
+    PSZ.state.goal_windows = results;
+
+    // Tampilkan jika UI tersedia
+    let html = "<b>Goal Window Probability</b><br>";
+    results.forEach(r => {
+        html += `${r.window}: Home ${r.home}% — Away ${r.away}%<br>`;
+    });
+
+    PSZ.to("goal_window_output", html);
+
+    return results;
+};
+
+</script>
+   <!-- ============================================================
+PART 13 — DYNAMIC EXPECTED GOALS ENGINE v1 (d-xG)
+Mengoreksi xG statis berdasarkan TCI, Pressing, Story, Goal Windows
+=============================================================== -->
+<script>
+
+PSZ.dynamicXG = function () {
+
+    PSZ.log("=== DYNAMIC xG ENGINE v1 START ===");
+
+    // xG statis dari input
+    let xgH = PSZ.num("adv_xg_home");
+    let xgA = PSZ.num("adv_xg_away");
+
+    // fallback kalau user belum isi xG, pakai lambda dari Prime / base
+    const baseLambda = PSZ.calcLambda?.();
+    if (!xgH && baseLambda?.lambda_home) xgH = baseLambda.lambda_home;
+    if (!xgA && baseLambda?.lambda_away) xgA = baseLambda.lambda_away;
+
+    // Ambil TCI
+    const TCI   = PSZ.state.tci_profile || {};
+    const tempo = (TCI.tempoH ?? 5 + TCI.tempoA ?? 5) / 2;
+    const chaos = (TCI.chaosH ?? 5 + TCI.chaosA ?? 5) / 2;
+
+    // Pressing
+    const { pressH, pressA } = PSZ.getPressing();
+
+    // Story + windows
+    const STORY  = PSZ.state.match_story   || {};
+    const GW     = PSZ.state.goal_windows  || [];
+
+    const momH   = PSZ.num("home_mom");
+    const momA   = PSZ.num("away_mom");
+    const errH   = PSZ.num("home_err");
+    const errA   = PSZ.num("away_err");
+    const stabH  = PSZ.num("home_stab");
+    const stabA  = PSZ.num("away_stab");
+
+    const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
+
+    // -------------------------------------------------
+    // 1) Hitung faktor ofensif untuk Home & Away
+    // -------------------------------------------------
+    function attackFactor(mom, press, tempoLocal, chaosLocal, errOpp, stabSelf) {
+        let f = 1.0;
+        f += (mom - 5)   * 0.05;   // momentum
+        f += (press - 5) * 0.04;   // pressing
+        f += (tempoLocal - 5) * 0.03;
+        f += (chaosLocal - 5) * 0.025;
+        f += (errOpp) * 0.03;      // error lawan menaikkan peluang
+        f -= (stabSelf - 6) * 0.03;
+        return clamp(f, 0.6, 1.6);
+    }
+
+    const tempoH = TCI.tempoH ?? tempo;
+    const tempoA = TCI.tempoA ?? tempo;
+    const chaosH = TCI.chaosH ?? chaos;
+    const chaosA = TCI.chaosA ?? chaos;
+
+    const atkH = attackFactor(momH, pressH, tempoH, chaosH, errA, stabH);
+    const atkA = attackFactor(momA, pressA, tempoA, chaosA, errH, stabA);
+
+    // -------------------------------------------------
+    // 2) Window boost: kapan tim lebih berbahaya?
+    // -------------------------------------------------
+    let boostH = 1.0, boostA = 1.0;
+
+    GW.forEach(w => {
+        // Home lebih dominan jika persen Home > Away di window itu
+        if (w.home > w.away) {
+            boostH += 0.01 * (w.home - w.away); // sampai kisaran ~+0.3
+        } else if (w.away > w.home) {
+            boostA += 0.01 * (w.away - w.home);
+        }
+    });
+
+    boostH = clamp(boostH, 0.8, 1.5);
+    boostA = clamp(boostA, 0.8, 1.5);
+
+    // -------------------------------------------------
+    // 3) Dynamic xG
+    // -------------------------------------------------
+    const dxgH = xgH * atkH * boostH;
+    const dxgA = xgA * atkA * boostA;
+
+    const result = {
+        xg_home_static: xgH,
+        xg_away_static: xgA,
+        xg_home_dynamic: dxgH,
+        xg_away_dynamic: dxgA,
+        attack_factor_home: atkH,
+        attack_factor_away: atkA,
+        window_boost_home: boostH,
+        window_boost_away: boostA
+    };
+
+    PSZ.state.dynamic_xg = result;
+
+    // Tulis ringkasan ke output (jika ada textarea / console)
+    PSZ.log(
+        "d-xG Home: " + dxgH.toFixed(2) + " (static " + xgH.toFixed(2) + ")" +
+        " | d-xG Away: " + dxgA.toFixed(2) + " (static " + xgA.toFixed(2) + ")"
+    );
+
+    PSZ.to("dxg_output", `
+        <b>Dynamic xG</b><br>
+        Home: ${dxgH.toFixed(2)} (static ${xgH.toFixed(2)})<br>
+        Away: ${dxgA.toFixed(2)} (static ${xgA.toFixed(2)})<br>
+        AF Home: ${atkH.toFixed(2)} | Window Boost: ${boostH.toFixed(2)}<br>
+        AF Away: ${atkA.toFixed(2)} | Window Boost: ${boostA.toFixed(2)}
+    `);
+
+    PSZ.log("=== DYNAMIC xG ENGINE v1 END ===\n");
+
+    return result;
+};
+
+</script>
+    <!-- ============================================================
+PART 14 — PARLAY CONFIDENCE MATRIX v1
+Menggabungkan Strength, Momentum, d-xG, Story, Difficulty, BRM
+=============================================================== -->
+<script>
+
+PSZ.parlayMatrix = function () {
+
+    PSZ.log("=== PARLAY MATRIX v1 START ===");
+
+    // Ambil hasil engine-engine sebelumnya
+    const dxg   = PSZ.state.dynamic_xg || {};
+    const STORY = PSZ.state.match_story || {};
+    const GW    = PSZ.state.goal_windows || [];
+    const TCI   = PSZ.state.tci_profile || {};
+
+    const lambda = PSZ.calcLambda?.() || {};
+
+    const { pressH, pressA } = PSZ.getPressing();
+
+    const momH  = PSZ.num("home_mom");
+    const momA  = PSZ.num("away_mom");
+
+    const stabH = PSZ.num("home_stab");
+    const stabA = PSZ.num("away_stab");
+
+    const chaos = (TCI.chaosH + TCI.chaosA) / 2;
+    const tempo = (TCI.tempoH + TCI.tempoA) / 2;
+
+    const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
+
+    // ============================================================
+    // 1) STRENGTH INDEX (kekuatan tim)
+    // ============================================================
+    const strengthH =
+        (dxg.xg_home_dynamic ?? 1) * 0.45 +
+        (momH * 0.12) +
+        (pressH * 0.10) -
+        (stabH * 0.07) +
+        (lambda.lambda_home ?? 1) * 0.25;
+
+    const strengthA =
+        (dxg.xg_away_dynamic ?? 1) * 0.45 +
+        (momA * 0.12) +
+        (pressA * 0.10) -
+        (stabA * 0.07) +
+        (lambda.lambda_away ?? 1) * 0.25;
+
+    const normH = clamp(strengthH / (strengthH + strengthA), 0.05, 0.95);
+    const normA = clamp(strengthA / (strengthH + strengthA), 0.05, 0.95);
+
+    // ============================================================
+    // 2) GAME ENVIRONMENT INDEX (lingkungan pertandingan)
+    // ============================================================
+    let env = 0;
+
+    // Chaos tinggi → banyak gol kejutan
+    env += chaos * 0.4;
+
+    // Tempo tinggi → peluang over meningkat
+    env += tempo * 0.3;
+
+    // Dominasi timeline
+    if (STORY.late_dom === "Home") env += 1.0;
+    if (STORY.late_dom === "Away") env += 1.0;
+
+    // Window probability mendukung goal
+    GW.forEach(w => {
+        env += (w.home + w.away) * 0.005;
+    });
+
+    env = clamp(env, 1, 10);
+
+    // ============================================================
+    // 3) 1X2 CONFIDENCE
+    // ============================================================
+    const home_win = clamp(normH * 100 + (momH - momA) * 2, 5, 90);
+    const away_win = clamp(normA * 100 + (momA - momH) * 2, 5, 90);
+    const draw     = clamp(100 - home_win - away_win, 5, 60);
+
+    // ============================================================
+    // 4) OVER/UNDER & BTTS
+    // ============================================================
+    const dxg_total = (dxg.xg_home_dynamic ?? 1) + (dxg.xg_away_dynamic ?? 1);
+
+    const over25 = clamp(dxg_total * env * 6, 10, 92);
+    const btts   = clamp(dxg_total * 18, 10, 90);
+
+    // ============================================================
+    // 5) PARLAY CONFIDENCE SCORE
+    // ============================================================
+    let parlay_conf =
+        (env * 6) +
+        (dxg_total * 8) +
+        (Math.max(home_win, away_win) * 0.4);
+
+    parlay_conf = clamp(parlay_conf, 10, 95);
+
+    const result = {
+        strength_home: strengthH,
+        strength_away: strengthA,
+        home_win,
+        draw,
+        away_win,
+        over25,
+        btts,
+        environment: env,
+        parlay_confidence: parlay_conf
+    };
+
+    PSZ.state.parlay_matrix = result;
+
+    // Tulis ke output jika UI tersedia
+    PSZ.to("parlay_matrix_output", `
+        <b>Parlay Matrix v1</b><br>
+        Home Win: ${home_win}%<br>
+        Draw: ${draw}%<br>
+        Away Win: ${away_win}%<br>
+        Over 2.5: ${over25}%<br>
+        BTTS: ${btts}%<br>
+        Parlay Safety Index: ${parlay_conf}%<br>
+        Environment: ${env.toFixed(1)}<br>
+    `);
+
+    PSZ.log("=== PARLAY MATRIX v1 END ===\n");
+
+    return result;
+};
+
+</script>
+    <!-- ============================================================
+PART 15 — CORRECT SCORE GRID v2
+Hybrid Poisson + Dynamic xG + Tempo/Chaos + Timeline
+=============================================================== -->
+<script>
+
+PSZ.correctScoreGrid = function () {
+
+    PSZ.log("=== CORRECT SCORE GRID v2 START ===");
+
+    // Dynamic xG
+    const dxg = PSZ.state.dynamic_xg || {};
+    let xgH = dxg.xg_home_dynamic ?? 1.1;
+    let xgA = dxg.xg_away_dynamic ?? 1.0;
+
+    // Timeline dominasi
+    const STORY = PSZ.state.match_story || {};
+    const early = STORY.early_dom;
+    const late  = STORY.late_dom;
+
+    // Chaos & tempo
+    const TCI = PSZ.state.tci_profile || {};
+    const tempo = (TCI.tempoH + TCI.tempoA) / 2;
+    const chaos = (TCI.chaosH + TCI.chaosA) / 2;
+
+    // Environment dari Part 14
+    const ENV = PSZ.state.parlay_matrix?.environment ?? 5;
+
+    const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
+
+    // Koreksi xG berdasarkan timeline
+    if (early === "Home") xgH *= 1.05;
+    if (early === "Away") xgA *= 1.05;
+    if (late === "Home") xgH *= 1.10;
+    if (late === "Away") xgA *= 1.10;
+
+    // Chaos mempengaruhi gol tak terduga
+    xgH *= (1 + (chaos - 5) * 0.03);
+    xgA *= (1 + (chaos - 5) * 0.03);
+
+    // Tempo mempengaruhi peluang gol awal
+    xgH *= (1 + (tempo - 5) * 0.02);
+    xgA *= (1 + (tempo - 5) * 0.02);
+
+    // Environment menaikkan total gol
+    const goalBoost = 1 + (ENV - 5) * 0.035;
+    xgH *= goalBoost;
+    xgA *= goalBoost;
+
+    xgH = clamp(xgH, 0.2, 4.5);
+    xgA = clamp(xgA, 0.2, 4.5);
+
+    // Poisson with context
+    function p(k, lambda) {
+        return Math.exp(-lambda) * Math.pow(lambda, k) / factorial(k);
+    }
+
+    function factorial(n) {
+        if (n === 0) return 1;
+        let f = 1;
+        for (let i = 1; i <= n; i++) f *= i;
+        return f;
+    }
+
+    let results = [];
+    let totalWeight = 0;
+
+    // Score range 0–4
+    for (let h = 0; h <= 4; h++) {
+        for (let a = 0; a <= 4; a++) {
+
+            let baseProb = p(h, xgH) * p(a, xgA);
+
+            // Chaos → lebih banyak hasil ekstrem
+            if ((h >= 3 || a >= 3) && chaos > 6) baseProb *= 1.15;
+
+            // Stability → mengurangi gol besar
+            const stabH = PSZ.num("home_stab");
+            const stabA = PSZ.num("away_stab");
+            if (h >= 3) baseProb *= (1 - stabA * 0.04);
+            if (a >= 3) baseProb *= (1 - stabH * 0.04);
+
+            // Momentum advantage
+            const momH = PSZ.num("home_mom");
+            const momA = PSZ.num("away_mom");
+            if (momH > momA + 2 && h > a) baseProb *= 1.10;
+            if (momA > momH + 2 && a > h) baseProb *= 1.10;
+
+            totalWeight += baseProb;
+
+            results.push({
+                score: `${h}-${a}`,
+                raw: baseProb
+            });
+        }
+    }
+
+    // Normalize ke 100%
+    results = results.map(r => ({
+        score: r.score,
+        prob: Number((r.raw / totalWeight * 100).toFixed(2))
+    }));
+
+    // Simpan hasil
+    PSZ.state.correct_score_grid = results;
+
+    // Tampilkan jika UI tersedia
+    let html = "<b>Correct Score Grid (0–4)</b><br>";
+    results.forEach(r => {
+        html += `${r.score}: ${r.prob}%<br>`;
+    });
+
+    PSZ.to("correct_score_output", html);
+
+    PSZ.log("=== CORRECT SCORE GRID v2 END ===");
+
+    return results;
+};
+
+</script>
+    <!-- ============================================================
+PART 16 — OVER/UNDER HEAT MODEL v1
+Lines: 0.5 / 1.5 / 2.5 / 3.5 / 4.5
+Basis: Dynamic xG + Environment (Parlay Matrix)
+=============================================================== -->
+<script>
+
+PSZ.ouHeat = function () {
+
+    PSZ.log("=== OVER/UNDER HEAT MODEL v1 START ===");
+
+    const dxg = PSZ.state.dynamic_xg || {};
+    let xgH = dxg.xg_home_dynamic ?? dxg.xg_home_static ?? 1.1;
+    let xgA = dxg.xg_away_dynamic ?? dxg.xg_away_static ?? 1.0;
+
+    const env = PSZ.state.parlay_matrix?.environment ?? 5;
+
+    const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
+
+    // total lambda gol
+    let λ = xgH + xgA;
+
+    // adjust dengan environment (tempo+chaos+windows)
+    const adj = 1 + (env - 5) * 0.06;
+    λ *= adj;
+    λ = clamp(λ, 0.2, 6.0);
+
+    // Poisson untuk total gol
+    function factorial(n) {
+        if (n === 0) return 1;
+        let f = 1;
+        for (let i = 1; i <= n; i++) f *= i;
+        return f;
+    }
+
+    function pois(k, lambda) {
+        return Math.exp(-lambda) * Math.pow(lambda, k) / factorial(k);
+    }
+
+    function probGoalsGE(kMin) {
+        let p = 0;
+        for (let k = kMin; k <= 12; k++) {
+            p += pois(k, λ);
+        }
+        return p;
+    }
+
+    // Line → minimal gol untuk "Over"
+    const lines = [
+        { key: "0_5", minGoal: 1 },
+        { key: "1_5", minGoal: 2 },
+        { key: "2_5", minGoal: 3 },
+        { key: "3_5", minGoal: 4 },
+        { key: "4_5", minGoal: 5 }
+    ];
+
+    let result = {};
+
+    lines.forEach(L => {
+        const over = probGoalsGE(L.minGoal);
+        const under = 1 - over;
+        result["O"+L.key] = Number((over * 100).toFixed(2));
+        result["U"+L.key] = Number((under * 100).toFixed(2));
+    });
+
+    PSZ.state.ou_heat = {
+        lambda_total: λ,
+        ...result
+    };
+
+    // Tampilkan jika ada elemen output
+    let html = "<b>Over/Under Heat Model</b><br>";
+    html += `λ total gol (adj): ${λ.toFixed(2)}<br><br>`;
+    html += `O0.5: ${result.O0_5}% — U0.5: ${result.U0_5}%<br>`;
+    html += `O1.5: ${result.O1_5}% — U1.5: ${result.U1_5}%<br>`;
+    html += `O2.5: ${result.O2_5}% — U2.5: ${result.U2_5}%<br>`;
+    html += `O3.5: ${result.O3_5}% — U3.5: ${result.U3_5}%<br>`;
+    html += `O4.5: ${result.O4_5}% — U4.5: ${result.U4_5}%<br>`;
+
+    PSZ.to("ou_heat_output", html);
+
+    PSZ.log("=== OVER/UNDER HEAT MODEL v1 END ===\n");
+
+    return PSZ.state.ou_heat;
+};
+
+</script>
 </body>
 </html>
 
