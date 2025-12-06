@@ -2973,25 +2973,24 @@ PSZ.ouHeat = function () {
 };
 
 </script>
-    <!-- ============================================================
-PART F — FINAL FIX LAYER
-Memperbaiki:
-1. Binding tombol
-2. Penyamaan ID input lama & baru
-3. Sistem output ke UI
-4. Pengamanan error tanpa menghentikan engine
-Harus berada di PALING BAWAH script
-=============================================================== -->
-
-<script>
-
+    <script>
 // ============================================================
-// 1. LOG SYSTEM FIX — Semua engine akan mengirim output ke UI
+// 1. LOG SYSTEM – Semua engine kirim output ke textarea
 // ============================================================
+
+if (!window.PSZ) window.PSZ = {};
+PSZ.state = PSZ.state || {};
+
+PSZ.el = id => document.getElementById(id);
+PSZ.num = (id, d=0) => Number(PSZ.el(id)?.value || d);
+PSZ.val = (id, d="") => PSZ.el(id)?.value || d;
 
 PSZ.write = function (msg) {
     const out = document.getElementById("analysis_output");
-    if (out) out.value += msg + "\n";
+    if (out) {
+        out.value += msg + "\n";
+        out.scrollTop = out.scrollHeight;
+    }
 };
 
 PSZ.log = function (msg) {
@@ -2999,46 +2998,35 @@ PSZ.log = function (msg) {
     PSZ.write(msg);
 };
 
-
 // ============================================================
-// 2. FIX INPUT SYSTEM — Samakan ID input berbeda agar engine cocok
+// 2. FIX INPUT – Samakan ID lama ↔ ID engine
 // ============================================================
 
 PSZ.fixInput = function () {
 
-    // helper auto map
     const mapID = (oldID, newID) => {
         const oldEl = document.getElementById(oldID);
         const newEl = document.getElementById(newID);
-        if (oldEl && newEl) newEl.value = oldEl.value;
+        if (oldEl && newEl && newEl.value === "") {
+            newEl.value = oldEl.value;
+        }
     };
 
-    // PPDA
-    mapID("ppda", "ppda_home");
-    mapID("ppda", "ppda_away");
-
-    // Stability
-    mapID("stability_home", "home_stab");
-    mapID("stability_away", "away_stab");
-
-    // Errors
-    mapID("error_home", "home_err");
-    mapID("error_away", "away_err");
-
-    // xGA
-    mapID("adv_xga_home", "xga_home");
-    mapID("adv_xga_away", "xga_away");
-
-    // Momentum
+    // Contoh mapping (pakai yang sudah ada di filemu)
+    mapID("ppda",          "adv_ppda_home");
+    mapID("ppda",          "adv_ppda_away");
+    mapID("stability_home","home_stab");
+    mapID("stability_away","away_stab");
+    mapID("error_home",    "home_err");
+    mapID("error_away",    "away_err");
     mapID("momentum_home", "home_mom");
     mapID("momentum_away", "away_mom");
 
     PSZ.log("[FIX] Input mapping selesai.");
 };
 
-
 // ============================================================
-// 3. FIX BUTTON SYSTEM — Menjamin semua ID tombol terhubung
+// 3. FIX BUTTON – Hubungkan tombol UI ↔ engine
 // ============================================================
 
 PSZ.fixButtons = function () {
@@ -3051,35 +3039,42 @@ PSZ.fixButtons = function () {
         }
         el.addEventListener("click", () => {
             PSZ.log("[RUN] " + id);
-            fn();
+            try { fn(); } catch(e){ console.error(e); PSZ.log("ERROR: "+e); }
         });
     };
 
     // Engine utama
-    bind("btn_analyze",       () => PSZ.primeEngine());
-    bind("btn_hybrid",        () => PSZ.hybridEngine());
-    bind("btn_chaos",         () => PSZ.chaosReality());
-    bind("btn_swing",         () => PSZ.swingReality());
-    bind("btn_grand_unified", () => PSZ.infinityEngine());
+    bind("btn_analyze",        () => PSZ.primeEngine?.());
+    bind("btn_hybrid",         () => PSZ.hybridEngine?.());
+    bind("btn_chaos",          () => PSZ.chaosReality?.());
+    bind("btn_swing",          () => PSZ.swingReality?.());
+    bind("btn_grand_unified",  () => PSZ.infinityEngine?.());
 
-    // AI stats
-    bind("btnTCI",            () => PSZ.autoTCI());
-    bind("btn_dxg",           () => PSZ.dynamicXG());
-    bind("btn_scoregrid",     () => PSZ.correctScoreGrid());
-    bind("btn_ou_heat",       () => PSZ.ouHeat());
-    bind("btn_swing_momentum",() => PSZ.swingMomentum());
-    bind("btn_matchstyle",    () => PSZ.matchStyle());
-    bind("btn_matchdiff",     () => PSZ.matchDifficulty());
+    // AI / advanced
+    bind("btnTCI",             () => PSZ.autoTCI?.());
+    bind("btn_dxg",            () => PSZ.dynamicXG?.());
+    bind("btn_scoregrid",      () => PSZ.correctScoreGrid?.());
+    bind("btn_ou_heat",        () => PSZ.ouHeat?.());
+    bind("btn_swing_momentum", () => PSZ.swingMomentum?.());
+    bind("btn_matchstyle",     () => PSZ.matchStyle?.());
+    bind("btn_matchdiff",      () => PSZ.matchDifficulty?.());
 
     // BRM
-    bind("btn_brm",           () => PSZ.calcBRM());
+    bind("btn_brm",            () => PSZ.calcBRM?.());
+
+    // Utility
+    bind("btn_auto_calc",      () => { PSZ.autoEstimatePPDA_Lite?.(); PSZ.autoTCI?.(); });
+    bind("btn_auto_tci2",      () => PSZ.autoTCI?.());
+    bind("btn_clear_output",   () => {
+        const out = document.getElementById("analysis_output");
+        if (out) out.value = "";
+    });
 
     PSZ.log("[FIX] Semua tombol berhasil dibind.");
 };
 
-
 // ============================================================
-// 4. STARTUP — Aktifkan FIX INPUT & FIX BUTTON saat halaman ready
+// 4. STARTUP – Jalankan saat halaman siap
 // ============================================================
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -3093,7 +3088,6 @@ document.addEventListener("DOMContentLoaded", () => {
         PSZ.log("ERROR STARTUP: " + e);
     }
 });
-
 </script>
 </body>
 </html>
