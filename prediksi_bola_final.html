@@ -136,7 +136,7 @@ textarea {
     <button id="btn_auto">Auto Calc (TCI + Dynamic xG)</button>
 </div>
 <div class="card">
-    <h2>Engine Tombol (Core + God + Supreme + Ultra + Omega)</h2>
+    <h2>Engine Tombol (Core + God + Supreme + Ultra + Omega / Alpha / Nexus)</h2>
     <!-- CORE -->
     <button id="btn_analyze">PRIME</button>
     <button id="btn_hybrid">HYBRID</button>
@@ -157,12 +157,14 @@ textarea {
     <button id="btn_supreme">SUPREME ENGINE (AI DECISION)</button>
     <button id="btn_montecarlo">MONTE CARLO SCORES</button>
     <button id="btn_variance">VARIANCE ENGINE</button>
-    <button id="btn_ultra_supreme">ULTRA SUPREME v2</button>
+    <button id="btn_ultra_supreme">ULTRA SUPREME v3</button>
     <br>
-    <!-- NEURAL / TRENDS / OMEGA -->
+    <!-- NEURAL / TRENDS / OMEGA / META -->
     <button id="btn_behavior">BEHAVIOR AI</button>
     <button id="btn_trends">TRENDS AI</button>
-    <button id="btn_omega">OMEGA ENGINE (FINAL)</button>
+    <button id="btn_omega">OMEGA ENGINE v2</button>
+    <button id="btn_alpha">ALPHA ENGINE</button>
+    <button id="btn_nexus">NEXUS MODEL</button>
 </div>
 
 
@@ -1963,88 +1965,452 @@ PSZ.runUltraSupremeEngine = function () {
     };
     return PSZ.state.ultra_supreme;
 };
-    // ======================================================
-// OMEGA ENGINE (FINAL FORM) — MASTER SUMMARY
+// ======================================================
+// OMEGA ENGINE v2 — FULL AUTO PICK
 // ======================================================
 PSZ.runOmegaEngine = function () {
     const teams      = PSZ.getTeams();
-    const dxg        = PSZ.state.dxg         || PSZ.dynamicXG();
-    const ou         = PSZ.state.ou_heat     || PSZ.runOUHeat();
-    const variance   = PSZ.state.variance    || PSZ.runVarianceEngine();
-    const behavior   = PSZ.state.behavior    || PSZ.runBehaviorAI();
-    const trends     = PSZ.state.trends      || PSZ.runTrendsAI();
+    const dxg        = PSZ.state.dxg           || PSZ.dynamicXG();
+    const ouHeat     = PSZ.state.ou_heat       || PSZ.runOUHeat();
+    const variance   = PSZ.state.variance      || PSZ.runVarianceEngine();
+    const behavior   = PSZ.state.behavior      || PSZ.runBehaviorAI();
+    const trends     = PSZ.state.trends        || PSZ.runTrendsAI();
     const ultra      = PSZ.state.ultra_supreme || PSZ.runUltraSupremeEngine();
-    const confidence = PSZ.state.confidence  || PSZ.runConfidenceIndex();
-    const infinity   = PSZ.state.infinity    || PSZ.runInfinity();
+    const confidence = PSZ.state.confidence    || PSZ.runConfidenceIndex();
+    const infinity   = PSZ.state.infinity      || PSZ.runInfinity();
 
-    const stability      = ultra.stability ?? 50;
-    const stabilityTag   = ultra.stabilityTag || "UNKNOWN";
-    const consensusLabel = ultra.consensusLabel || "N/A";
-    const varIdx         = variance.varianceIndex ?? 5;
-    const shockIdx       = variance.shockIndex ?? 5;
+    const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+    const fmtP  = (p) => (p == null ? "-" : p.toFixed(2));
 
-    // Parlay suitability (Anchor / Filler / Avoid)
-    let parlayRole = "FILLER NORMAL";
-    if (stability >= 70 && varIdx <= 5 && confidence.tag === "HIGH") {
-        parlayRole = "ANCHOR (TULANG PUNGGUNG PARLAY)";
+    // --- 1. Ambil probabilitas final 1X2 dari Ultra ---
+    const pHome = (ultra.pCal && ultra.pCal.home) ?? (ultra.pFinal && ultra.pFinal.home) ?? 33.33;
+    const pDraw = (ultra.pCal && ultra.pCal.draw) ?? (ultra.pFinal && ultra.pFinal.draw) ?? 33.33;
+    const pAway = (ultra.pCal && ultra.pCal.away) ?? (ultra.pFinal && ultra.pFinal.away) ?? 33.33;
+
+    let mainSide = ultra.mainFinal || "MIXED";
+    if (mainSide === "UNKNOWN" || !mainSide) {
+        const arr = [
+            { k: "HOME", v: pHome },
+            { k: "DRAW", v: pDraw },
+            { k: "AWAY", v: pAway }
+        ].sort((a, b) => b.v - a.v);
+        mainSide = arr[0].k;
+    }
+
+    // gap antara top & runner-up → seberapa kuat edge 1X2
+    const sorted = [
+        { k: "HOME", v: pHome },
+        { k: "DRAW", v: pDraw },
+        { k: "AWAY", v: pAway }
+    ].sort((a, b) => b.v - a.v);
+    const gapTop = sorted[0].v - sorted[1].v;
+
+    // --- 2. OU & BTTS dari xG + OUHeat ---
+    const totalXg = dxg.total_xg ?? (dxg.hxg_dyn || 0) + (dxg.axg_dyn || 0);
+    const lambda  = ouHeat.lambda_total ?? totalXg;
+
+    let ouZone = "NEUTRAL ZONE";
+    if (lambda >= 3.1) ouZone = "HIGH OVER ZONE";
+    else if (lambda <= 2.1) ouZone = "LOW / UNDER ZONE";
+
+    let ouPick = "NETRAL OU (butuh konfirmasi odds)";
+    if (ouZone === "HIGH OVER ZONE") ouPick = "LEAN OVER (2.5 / 3.0)";
+    if (ouZone === "LOW / UNDER ZONE") ouPick = "LEAN UNDER (2.5 / 2.0)";
+
+    // BTTS kasar: makin tinggi total xG & balance makin besar
+    const { hxg, axg } = PSZ.getBaseXG();
+    const balanceXg = Math.abs(hxg - axg);
+    let bttsTag = "BTTS 50:50 / NETRAL";
+    const bttsScore = clamp((lambda - balanceXg) * 2.0, 0, 10); // 0–10
+
+    if (bttsScore >= 7) bttsTag = "BTTS LIKELY (YES condong)";
+    else if (bttsScore <= 3) bttsTag = "BTTS LOW (NO condong)";
+
+    // --- 3. Difficulty & Parlay Role ---
+    const stability    = ultra.stability ?? 50;
+    const stabilityTag = ultra.stabilityTag || "UNKNOWN";
+    const varIdx       = variance.varianceIndex ?? 5;
+    const shockIdx     = variance.shockIndex ?? 5;
+    const cIndex       = confidence.cIndex ?? 50;
+
+    let difficulty = "MEDIUM / FAIR";
+    if (stability >= 70 && varIdx <= 4 && shockIdx <= 4 && gapTop >= 8) {
+        difficulty = "EASY / CONTROLLED";
     } else if (stability <= 40 || varIdx >= 8 || shockIdx >= 8) {
+        difficulty = "HARD / CHAOTIC";
+    }
+
+    let parlayRole = "FILLER NORMAL";
+    if (difficulty === "EASY / CONTROLLED" && cIndex >= 65) {
+        parlayRole = "ANCHOR (TULANG PUNGGUNG PARLAY)";
+    } else if (difficulty === "HARD / CHAOTIC" || gapTop < 4) {
         parlayRole = "AVOID / FUN TICKET SAJA";
     }
 
+    // --- 4. Market alignment (opsional) ---
+    const oddsH = PSZ.num("odds_home");
+    const oddsD = PSZ.num("odds_draw");
+    const oddsA = PSZ.num("odds_away");
+    let marketComment = "Odds belum lengkap → tidak ada market alignment.";
+
+    if (oddsH > 1 && oddsD > 1 && oddsA > 1) {
+        const iHome = 1 / oddsH;
+        const iDraw = 1 / oddsD;
+        const iAway = 1 / oddsA;
+        const sImplied = iHome + iDraw + iAway;
+        const mHome = (iHome / sImplied) * 100;
+        const mDraw = (iDraw / sImplied) * 100;
+        const mAway = (iAway / sImplied) * 100;
+
+        const diffHome = pHome - mHome;
+        const diffAway = pAway - mAway;
+
+        if (Math.abs(diffHome) < 4 && Math.abs(diffAway) < 4) {
+            marketComment = "Model ≈ market (tidak ada edge besar, bisa dijadikan referensi normal).";
+        } else if (diffHome >= 5 && diffHome >= diffAway) {
+            marketComment = "Model melihat VALUE di HOME (probabilitas model > implied odds).";
+        } else if (diffAway >= 5 && diffAway >= diffHome) {
+            marketComment = "Model melihat VALUE di AWAY (probabilitas model > implied odds).";
+        } else {
+            marketComment = "Ada perbedaan model vs market, gunakan secara selektif.";
+        }
+    }
+
+    // --- 5. Teks output OMEGA v2 ---
     const txt = [];
     txt.push("################################################");
-    txt.push("#################  OMEGA ENGINE  ###############");
+    txt.push("###############  OMEGA ENGINE v2  ##############");
     txt.push("################################################");
-    txt.push(`Match              : ${teams.home} vs ${teams.away}`);
+    txt.push(`Match                : ${teams.home} vs ${teams.away}`);
     txt.push("");
-    txt.push("RINGKASAN INTI MODEL:");
-    txt.push(`- Dynamic xG Total     : ${dxg.total_xg.toFixed(2)}`);
-    txt.push(`- OU Heat Zone         : ${ou.tag}`);
-    txt.push(`- Variance Index       : ${varIdx.toFixed(2)} / 10`);
-    txt.push(`- Shock Potential      : ${shockIdx.toFixed(2)} / 10`);
-    txt.push(`- Stability Index      : ${stability.toFixed(1)} / 100 → ${stabilityTag}`);
-    txt.push(`- Confidence Index     : ${confidence.cIndex?.toFixed(1) || "n/a"} / 100 (${confidence.tag || "-"})`);
-    txt.push(`- Consensus Status     : ${consensusLabel}`);
+    txt.push("SNAPSHOT 1X2 MODEL (setelah Ultra / kalibrasi):");
+    txt.push(`- HOME : ${fmtP(pHome)} %`);
+    txt.push(`- DRAW : ${fmtP(pDraw)} %`);
+    txt.push(`- AWAY : ${fmtP(pAway)} %`);
+    txt.push(`- Main side           : ${mainSide}`);
+    txt.push(`- Gap top vs runner-up: ${gapTop.toFixed(2)} %`);
+    txt.push("");
+    txt.push("GOAL / OU / BTTS LAYER:");
+    txt.push(`- Dynamic xG Total    : ${totalXg.toFixed(2)}`);
+    txt.push(`- λ total (OU Heat)   : ${lambda.toFixed(2)} → Zone: ${ouZone}`);
+    txt.push(`- OU Pick             : ${ouPick}`);
+    txt.push(`- BTTS Estimation     : ${bttsTag}`);
+    txt.push("");
+    txt.push("VOLATILITY & STABILITY:");
+    txt.push(`- Variance Index      : ${varIdx.toFixed(2)} / 10`);
+    txt.push(`- Shock Potential     : ${shockIdx.toFixed(2)} / 10`);
+    txt.push(`- Stability Index     : ${stability.toFixed(1)} / 100 → ${stabilityTag}`);
+    txt.push(`- Confidence Index    : ${cIndex.toFixed(1)} / 100 (${confidence.tag || "-"})`);
     txt.push("");
     txt.push("BEHAVIOR & TRENDS:");
-    txt.push(`- Match Behavior Class : ${behavior.behaviorTag}`);
-    txt.push(`- Trend Snapshot       : ${trends.momentumGlobal}`);
+    txt.push(`- Match Behavior      : ${behavior.behaviorTag}`);
+    txt.push(`- Trends Summary      : ${trends.momentumGlobal}`);
     txt.push("");
-    txt.push("MODE STRATEGI:");
-    txt.push(`- Infinity Mode        : ${infinity.safeMode ? "SAFE / CONTROL" : "AGGRESSIVE / CHAOTIC"}`);
-    txt.push(`- Peran di Parlay      : ${parlayRole}`);
+    txt.push("REKOMENDASI OTOMATIS OMEGA v2:");
+    txt.push(`- Main 1X2 lean       : ${mainSide}`);
+    txt.push(`- OU lean             : ${ouPick}`);
+    txt.push(`- BTTS lean           : ${bttsTag}`);
+    txt.push(`- Difficulty Level    : ${difficulty}`);
+    txt.push(`- Parlay Role         : ${parlayRole}`);
     txt.push("");
-    txt.push("INTERPRETASI PRAKTIS:");
-    txt.push("- Jika ANCHOR → cocok jadi tulang punggung parlay, stake lebih besar tapi tetap sesuai manajemen risiko.");
-    txt.push("- Jika FILLER NORMAL → cocok sebagai pelengkap di slip, stake menengah/normal.");
-    txt.push("- Jika AVOID → lebih cocok untuk eksperimen kecil atau di-skip dari parlay utama.");
+    txt.push("MARKET ALIGNMENT:");
+    txt.push(`- ${marketComment}`);
     txt.push("");
-    txt.push("Catatan:");
-    txt.push("- OMEGA tidak mengganti penilaian kamu, tapi merangkum semua layer model menjadi satu pandangan.");
-    txt.push("- Semua berbasis data yang baru saja kamu input di form, tidak ada data bawaan atau contoh.");
+    txt.push("Catatan: ini murni hasil model dari input statistik + odds (jika diisi). Selalu cek lineup, kondisi tim, dan konteks nyata sebelum eksekusi tiket.");
     txt.push("");
 
     PSZ.log(txt.join("\n"));
 
     PSZ.state.omega = {
-        parlayRole,
+        mainSide,
+        p: { home: pHome, draw: pDraw, away: pAway },
+        gapTop,
+        totalXg,
+        lambda,
+        ouZone,
+        ouPick,
+        bttsTag,
         stability,
         stabilityTag,
-        varianceIndex: varIdx,
-        shockIdx
+        varIdx,
+        shockIdx,
+        cIndex,
+        difficulty,
+        parlayRole
     };
     return PSZ.state.omega;
 };
-    
+
 // ======================================================
+// ALPHA ENGINE — AMBIGUITY / GREY ZONE ANALYZER
+// ======================================================
+PSZ.runAlphaEngine = function () {
+    const teams      = PSZ.getTeams();
+    const variance   = PSZ.state.variance      || PSZ.runVarianceEngine();
+    const ultra      = PSZ.state.ultra_supreme || PSZ.runUltraSupremeEngine();
+    const confidence = PSZ.state.confidence    || PSZ.runConfidenceIndex();
+    const omega      = PSZ.state.omega         || PSZ.runOmegaEngine();
 
+    const pHome = omega.p?.home ?? 33.33;
+    const pDraw = omega.p?.draw ?? 33.33;
+    const pAway = omega.p?.away ?? 33.33;
+
+    const arr = [
+        { k: "HOME", v: pHome },
+        { k: "DRAW", v: pDraw },
+        { k: "AWAY", v: pAway }
+    ].sort((a, b) => b.v - a.v);
+
+    const topGap    = arr[0].v - arr[1].v;
+    const stability = ultra.stability ?? 50;
+    const varIdx    = variance.varianceIndex ?? 5;
+    const shockIdx  = variance.shockIndex ?? 5;
+    const cIndex    = confidence.cIndex ?? 50;
+
+    const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+
+    // Ambiguity Index 0–10: makin besar → makin "abu-abu"
+    let ambiguity = 0;
+    ambiguity += (10 - stability / 10) * 0.35;   // makin tidak stabil, makin abu
+    ambiguity += varIdx * 0.25;                  // variance tinggi → abu
+    ambiguity += shockIdx * 0.20;                // shock tinggi → abu
+    if (topGap < 8) ambiguity += 2.0;            // 1X2 mepet → tambah abu
+    if (cIndex < 55) ambiguity += 1.0;           // confidence rendah → tambah abu
+    ambiguity = clamp(ambiguity, 0, 10);
+
+    let alphaLabel = "CLEAR EDGE ZONE";
+    if (ambiguity >= 6.5) alphaLabel = "CHAOTIC / TRAP ZONE";
+    else if (ambiguity >= 3.5) alphaLabel = "GREY ZONE / MIXED";
+
+    const txt = [];
+    txt.push("============================================");
+    txt.push("=============  ALPHA ENGINE  ===============");
+    txt.push("============================================");
+    txt.push(`Match         : ${teams.home} vs ${teams.away}`);
+    txt.push("");
+    txt.push("1X2 STRUCTURE:");
+    txt.push(`- Top vs 2nd gap   : ${topGap.toFixed(2)} %`);
+    txt.push(`- Main side (Omega): ${omega.mainSide}`);
+    txt.push("");
+    txt.push("VOLATILITY FRAME:");
+    txt.push(`- Stability Index  : ${(stability).toFixed(1)} / 100`);
+    txt.push(`- Variance Index   : ${varIdx.toFixed(2)} / 10`);
+    txt.push(`- Shock Potential  : ${shockIdx.toFixed(2)} / 10`);
+    txt.push(`- Confidence Index : ${cIndex.toFixed(1)} / 100`);
+    txt.push("");
+    txt.push("ALPHA VIEW (Ambiguity / Trap Detection):");
+    txt.push(`- Ambiguity Index  : ${ambiguity.toFixed(2)} / 10`);
+    txt.push(`- Zone             : ${alphaLabel}`);
+    txt.push("");
+    if (alphaLabel === "CLEAR EDGE ZONE") {
+        txt.push("Interpretasi: match relatif 'jelas', edge model cukup bersih. Cocok untuk tiket utama / single.");
+    } else if (alphaLabel === "GREY ZONE / MIXED") {
+        txt.push("Interpretasi: area abu-abu. Lebih cocok untuk kombinasi ringan / hedge, jangan terlalu agresif stake.");
+    } else {
+        txt.push("Interpretasi: zona jebakan / chaotic. Lebih aman: kecilkan stake, atau jadikan match ini 'bonus' saja.");
+    }
+    txt.push("");
+    txt.push("Catatan: Alpha tidak mengubah prediksi, hanya menilai seberapa 'bersih' edge dari sudut pandang risiko.");
+    txt.push("");
+
+    PSZ.log(txt.join("\n"));
+
+    PSZ.state.alpha = {
+        ambiguity,
+        alphaLabel,
+        topGap
+    };
+    return PSZ.state.alpha;
+};
+
+// ======================================================
+// NEXUS MODEL — FINAL FUSION INDEX
+// ======================================================
+PSZ.runNexusModel = function () {
+    const teams      = PSZ.getTeams();
+    const omega      = PSZ.state.omega         || PSZ.runOmegaEngine();
+    const alpha      = PSZ.state.alpha         || PSZ.runAlphaEngine();
+    const ultra      = PSZ.state.ultra_supreme || PSZ.runUltraSupremeEngine();
+    const variance   = PSZ.state.variance      || PSZ.runVarianceEngine();
+    const confidence = PSZ.state.confidence    || PSZ.runConfidenceIndex();
+
+    const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+
+    const stability = ultra.stability ?? 50;
+    const varIdx    = variance.varianceIndex ?? 5;
+    const shockIdx  = variance.shockIndex ?? 5;
+    const cIndex    = confidence.cIndex ?? 50;
+    const ambiguity = alpha.ambiguity ?? 5;
+
+    const stabilityNorm = stability / 100;        // tinggi bagus
+    const varNorm       = 1 - (varIdx / 10);      // rendah bagus
+    const shockNorm     = 1 - (shockIdx / 10);    // rendah bagus
+    const confNorm      = cIndex / 100;           // tinggi bagus
+    const ambNorm       = 1 - (ambiguity / 10);   // rendah bagus
+
+    let nexusScore = (
+        stabilityNorm +
+        varNorm +
+        shockNorm +
+        confNorm +
+        ambNorm
+    ) / 5 * 100;
+
+    nexusScore = clamp(nexusScore, 0, 100);
+
+    let nexusZone = "YELLOW ZONE (medium risk)";
+    if (nexusScore >= 72) nexusZone = "GREEN ZONE (favourable)";
+    else if (nexusScore <= 48) nexusZone = "RED ZONE (high risk)";
+
+    // Rekomendasi praktis Nexus
+    const mainSide   = omega.mainSide || ultra.mainFinal || "MIXED";
+    const difficulty = omega.difficulty || "MEDIUM / FAIR";
+    const parlayRole = omega.parlayRole || "FILLER NORMAL";
+
+    const safeIdeas  = [];
+    const mainIdeas  = [];
+    const riskyIdeas = [];
+
+     if (nexusZone === "GREEN ZONE (favourable)") {
+
+        if (mainSide === "HOME") mainIdeas.push("HOME / 1X sebagai core ide.");
+
+        else if (mainSide === "AWAY") mainIdeas.push("AWAY / X2 sebagai core ide.");
+
+        else mainIdeas.push("DRAW / handicap tipis sebagai core ide.");
+
+    } else if (nexusZone === "YELLOW ZONE (medium risk)") {
+
+        mainIdeas.push("Gunakan ide utama hanya dengan stake moderat, jangan dijadikan satu-satunya anchor.");
+
+    } else {
+
+        riskyIdeas.push("Match ini lebih cocok sebagai fun ticket / small stake. Hindari jadi anchor.");
+
+    }
+
+
+
+    if (difficulty === "EASY / CONTROLLED" && nexusZone === "GREEN ZONE (favourable)") {
+
+        safeIdeas.push("Bisa dipertimbangkan sebagai salah satu anchor parlay (bukan satu-satunya).");
+
+    }
+
+
+
+    if (parlayRole === "AVOID / FUN TICKET SAJA" || nexusZone === "RED ZONE (high risk)") {
+
+        riskyIdeas.push("Kalau tetap ambil, treat sebagai high risk / longshot saja.");
+
+    }
+
+
+
+    const txt = [];
+
+    txt.push("********************************************");
+
+    txt.push("************  NEXUS MODEL FINAL  ***********");
+
+    txt.push("********************************************");
+
+    txt.push(`Match        : ${teams.home} vs ${teams.away}`);
+
+    txt.push("");
+
+    txt.push("NEXUS SCORE (0–100):");
+
+    txt.push(`- Nilai Nexus      : ${nexusScore.toFixed(1)} / 100`);
+
+    txt.push(`- Zona             : ${nexusZone}`);
+
+    txt.push("");
+
+    txt.push("INPUT RINGKAS (dari layer lain):");
+
+    txt.push(`- Main side (Omega): ${mainSide}`);
+
+    txt.push(`- Difficulty (Omega): ${difficulty}`);
+
+    txt.push(`- Parlay Role (Omega): ${parlayRole}`);
+
+    txt.push(`- Alpha Ambiguity   : ${ambiguity.toFixed(2)} / 10 (${alpha.alphaLabel})`);
+
+    txt.push("");
+
+    txt.push("NEXUS RECOMMENDATION:");
+
+    if (safeIdeas.length) {
+
+        txt.push("SAFE / LOW RISK:");
+
+        safeIdeas.forEach(r => txt.push("• " + r));
+
+        txt.push("");
+
+    }
+
+    if (mainIdeas.length) {
+
+        txt.push("MAIN / CORE IDEA:");
+
+        mainIdeas.forEach(r => txt.push("• " + r));
+
+        txt.push("");
+
+    }
+
+    if (riskyIdeas.length) {
+
+        txt.push("RISKY / HIGH REWARD:");
+
+        riskyIdeas.forEach(r => txt.push("• " + r));
+
+        txt.push("");
+
+    }
+
+    txt.push("Catatan: Nexus bukan pengganti judgement, tapi layer terakhir untuk mengukur apakah ide dari engine lain layak dijadikan core parlay atau hanya fun ticket.");
+
+    txt.push("");
+    PSZ.log(txt.join("\n"));
+    PSZ.state.nexus = {
+
+        nexusScore,
+
+        nexusZone,
+
+        mainSide,
+
+        difficulty,
+
+        parlayRole
+
+    };
+
+    return PSZ.state.nexus;
+};
+    
+
+    // ======================================================
 // BIND TOMBOL + STARTUP
-
 // ======================================================
 PSZ.bindButtons = function () {
     const b = (id, fn) => {
-        const el = PSZ.el(id);
-        if (el) el.onclick = fn;
+        const el = document.getElementById(id);
+        if (!el) {
+            PSZ.log("[WARNING] Tombol tidak ditemukan: " + id);
+            return;
+        }
+        el.addEventListener("click", () => {
+            try {
+                fn();
+            } catch (e) {
+                console.error(e);
+                PSZ.log("ERROR di tombol " + id + ": " + e);
+            }
+        });
     };
 
     // Core
@@ -2137,7 +2503,7 @@ PSZ.bindButtons = function () {
         PSZ.runUltraSupremeEngine();
     });
 
-    // Behavior / Trends / Omega
+    // Behavior / Trends / Omega / Alpha / Nexus
     b("btn_behavior", () => {
         PSZ.log("Menjalankan BEHAVIOR AI ENGINE...");
         PSZ.runBehaviorAI();
@@ -2149,9 +2515,25 @@ PSZ.bindButtons = function () {
     });
 
     b("btn_omega", () => {
-        PSZ.log("Menjalankan OMEGA ENGINE (FINAL FORM)...");
+        PSZ.log("Menjalankan OMEGA ENGINE v2 (full auto pick)...");
         PSZ.runOmegaEngine();
     });
+
+    b("btn_alpha", () => {
+        PSZ.log("Menjalankan ALPHA ENGINE (ambiguity / trap scan)...");
+        PSZ.runAlphaEngine();
+    });
+
+    b("btn_nexus", () => {
+        PSZ.log("Menjalankan NEXUS MODEL (final fusion)...");
+        PSZ.runNexusModel();
+    });
+};
+
+document.addEventListener("DOMContentLoaded", function () {
+    PSZ.bindButtons();
+    PSZ.log("ULTRA SUPREME + OMEGA v2 + ALPHA + NEXUS siap. Isi data aktual, tekan Auto Calc, lalu gunakan engine sesuai kebutuhan.");
+});
 </script>
 </div>
 </body>
