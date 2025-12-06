@@ -405,162 +405,9 @@ Prime Engine / Hybrid / Swing / Chaos / Infinity + Output Panel
 </div>
 
 
-<h2>📤 Output Analisis</h2>
-
-<div class="card">
-    <label>Hasil Analisis & Engine Log:</label>
-    <textarea id="analysis_output" style="width:100%; height:260px; border-radius:8px; padding:10px; border:1px solid #aaa; background:#fafafa;"></textarea>
-</div>
-
-<!-- ====================== PART E END ======================== -->
-  <!-- ============================================================
-PREMIUM UI – PART F (FINAL)
-Compatibility Layer + Button Binding + Auto TCI Display
-=============================================================== -->
-
-<script>
-/* ============================================================
-   FIX 1 — Sinkronisasi Input dengan Engine
-   Jika UI memakai ID berbeda, otomatis diganti agar cocok
-=============================================================== */
-PSZ.fixInput = function () {
-
-    function alias(target, source) {
-        const trg = document.getElementById(target);
-        if (trg) return;  // sudah ada → tidak perlu alias
-
-        const src = document.getElementById(source);
-        if (!src) return; // tidak ada di UI
-
-        src.id = target;
-        console.log("[Alias] " + source + " → " + target);
-    }
-
-    // PPDA
-    alias("ppda_home", "adv_ppda_home");
-    alias("ppda_away", "adv_ppda_away");
-
-    // Stability
-    alias("home_st", "home_stab");
-    alias("away_st", "away_stab");
-
-    // Error
-    alias("adv_err_home", "err_home");
-    alias("adv_err_away", "err_away");
-
-    // xGA
-    alias("adv_xga_home", "xga_home");
-    alias("adv_xga_away", "xga_away");
-
-    // Momentum
-    alias("home_mom", "momentum_home");
-    alias("away_mom", "momentum_away");
-
-    // Flexibility
-    alias("home_flex", "flex_home");
-    alias("away_flex", "flex_away");
-
-    // TCI Auto Fields
-    alias("tci_tempo", "tempo_value");
-    alias("tci_chaos", "chaos_value");
-    alias("tci_importance", "importance_value");
-
-    console.log("FIX INPUT: Semua ID input sudah sinkron.");
-};
-
-
-/* ============================================================
-   FIX 2 — Sinkronisasi Tombol UI dengan Engine
-   Semua tombol premium UI dihubungkan ke fungsi Part 1–7
-=============================================================== */
-PSZ.fixButtons = function () {
-
-    function bind(newID, fn) {
-        const el = document.getElementById(newID);
-        if (!el) return;
-        el.onclick = fn;
-        console.log("[Bind] Tombol:", newID);
-    }
-
-    // PRIME ENGINE
-    bind("btn_analyze", () => PSZ.primeEngine());
-
-    // HYBRID ENGINE
-    bind("btn_hybrid", () => PSZ.hybridEngine());
-    bind("btn_swing", () => PSZ.swingReality());
-    bind("btn_chaos", () => PSZ.chaosReality());
-
-    // INFINITY ENGINE
-    bind("btn_grand_unified", () => PSZ.infinityEngine());
-
-    // ANALYTICS
-    bind("btn_trend", () => PSZ.calcTrend());
-    bind("btn_diff",  () => PSZ.calcDifficulty());
-    bind("btn_flow",  () => PSZ.calcFlow());
-    bind("btn_setp",  () => PSZ.calcSetPiece());
-    bind("btn_brm",   () => PSZ.calcBRM());
-
-    // DIM / TCA / PIM / xT
-    bind("btn_dim",    () => PSZ.calcDIM());
-    bind("btn_tca",    () => PSZ.calcTCA());
-    bind("btn_pim",    () => PSZ.calcPIM());
-    bind("btn_xtlite", () => PSZ.calcXTLite());
-    bind("btn_xtmax",  () => PSZ.calcXTMax());
-    bind("btn_matchstyle", () => PSZ.matchStyle());
-    bind("btn_xtmax", () => PSZ.calcXTMax());
-    bind("btn_matchstyle", () => PSZ.matchStyle());
-    bind("btn_matchdiff", () => PSZ.matchDifficulty());
-    bind("btn_swing_momentum", () => PSZ.momentumSwing());
-    bind("btn_dxg", () => PSZ.dynamicXG());
-    bind("btn_ou_heat", () => PSZ.ouHeat());
-    
-    // TCI AUTO
-    bind("btnTCI", () => PSZ.autoTCI());
-
-};
-
-/* ============================================================
-   FIX 3 — TCI Auto Writer
-   Menampilkan nilai Tempo / Chaos / Importance ke UI
-=============================================================== */
-PSZ.showTCI = function () {
-    const tci = PSZ.state.tci_profile;
-    if (!tci) return;
-
-    function set(id, value) {
-        const el = document.getElementById(id);
-        if (el) el.value = value;
-    }
-
-    set("tci_tempo", tci.tempo.global);
-    set("tci_chaos", tci.chaos.global);
-    set("tci_importance", tci.importance);
-
-    console.log("TCI ditampilkan ke UI.");
-};
-
-// Override autoTCI agar selalu update UI
-const oldTCI = PSZ.autoTCI;
-PSZ.autoTCI = function () {
-    const result = oldTCI();
-    PSZ.showTCI();
-    return result;
-};
-
-
-/* ============================================================
-   Inisialisasi ketika halaman selesai dimuat
-=============================================================== */
-document.addEventListener("DOMContentLoaded", () => {
-    PSZ.fixInput();
-    PSZ.fixButtons();
-    console.log("UI Premium Compatibility Layer aktif.");
-});
-</script>
 
 </div> <!-- penutup .container utama -->
 
-<!-- ====================== PART F END ======================== -->
   
 <!-- ============================================================
 PART 1 — CORE ENGINE + UTILITAS + AUTO TCI v8
@@ -3124,6 +2971,128 @@ PSZ.ouHeat = function () {
 
     return PSZ.state.ou_heat;
 };
+
+</script>
+    <!-- ============================================================
+PART F — FINAL FIX LAYER
+Memperbaiki:
+1. Binding tombol
+2. Penyamaan ID input lama & baru
+3. Sistem output ke UI
+4. Pengamanan error tanpa menghentikan engine
+Harus berada di PALING BAWAH script
+=============================================================== -->
+
+<script>
+
+// ============================================================
+// 1. LOG SYSTEM FIX — Semua engine akan mengirim output ke UI
+// ============================================================
+
+PSZ.write = function (msg) {
+    const out = document.getElementById("analysis_output");
+    if (out) out.value += msg + "\n";
+};
+
+PSZ.log = function (msg) {
+    console.log(msg);
+    PSZ.write(msg);
+};
+
+
+// ============================================================
+// 2. FIX INPUT SYSTEM — Samakan ID input berbeda agar engine cocok
+// ============================================================
+
+PSZ.fixInput = function () {
+
+    // helper auto map
+    const mapID = (oldID, newID) => {
+        const oldEl = document.getElementById(oldID);
+        const newEl = document.getElementById(newID);
+        if (oldEl && newEl) newEl.value = oldEl.value;
+    };
+
+    // PPDA
+    mapID("ppda", "ppda_home");
+    mapID("ppda", "ppda_away");
+
+    // Stability
+    mapID("stability_home", "home_stab");
+    mapID("stability_away", "away_stab");
+
+    // Errors
+    mapID("error_home", "home_err");
+    mapID("error_away", "away_err");
+
+    // xGA
+    mapID("adv_xga_home", "xga_home");
+    mapID("adv_xga_away", "xga_away");
+
+    // Momentum
+    mapID("momentum_home", "home_mom");
+    mapID("momentum_away", "away_mom");
+
+    PSZ.log("[FIX] Input mapping selesai.");
+};
+
+
+// ============================================================
+// 3. FIX BUTTON SYSTEM — Menjamin semua ID tombol terhubung
+// ============================================================
+
+PSZ.fixButtons = function () {
+
+    const bind = (id, fn) => {
+        const el = document.getElementById(id);
+        if (!el) {
+            PSZ.log("[WARNING] Tombol tidak ditemukan: " + id);
+            return;
+        }
+        el.addEventListener("click", () => {
+            PSZ.log("[RUN] " + id);
+            fn();
+        });
+    };
+
+    // Engine utama
+    bind("btn_analyze",       () => PSZ.primeEngine());
+    bind("btn_hybrid",        () => PSZ.hybridEngine());
+    bind("btn_chaos",         () => PSZ.chaosReality());
+    bind("btn_swing",         () => PSZ.swingReality());
+    bind("btn_grand_unified", () => PSZ.infinityEngine());
+
+    // AI stats
+    bind("btnTCI",            () => PSZ.autoTCI());
+    bind("btn_dxg",           () => PSZ.dynamicXG());
+    bind("btn_scoregrid",     () => PSZ.correctScoreGrid());
+    bind("btn_ou_heat",       () => PSZ.ouHeat());
+    bind("btn_swing_momentum",() => PSZ.swingMomentum());
+    bind("btn_matchstyle",    () => PSZ.matchStyle());
+    bind("btn_matchdiff",     () => PSZ.matchDifficulty());
+
+    // BRM
+    bind("btn_brm",           () => PSZ.calcBRM());
+
+    PSZ.log("[FIX] Semua tombol berhasil dibind.");
+};
+
+
+// ============================================================
+// 4. STARTUP — Aktifkan FIX INPUT & FIX BUTTON saat halaman ready
+// ============================================================
+
+document.addEventListener("DOMContentLoaded", () => {
+    try {
+        PSZ.log("=== SCRIPT START ===");
+        PSZ.fixInput();
+        PSZ.fixButtons();
+        PSZ.log("=== SYSTEM READY ===");
+    } catch (e) {
+        console.error(e);
+        PSZ.log("ERROR STARTUP: " + e);
+    }
+});
 
 </script>
 </body>
