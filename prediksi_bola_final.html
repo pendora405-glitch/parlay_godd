@@ -1582,12 +1582,13 @@ PSZ.runSupremeEngine = function () {
 
 };
 // ======================================================
-// ULTRA SUPREME ENGINE — META + MONTE CARLO + VARIANCE
+// ULTRA SUPREME ENGINE v2
+// META + MONTE CARLO + VARIANCE + SOFT MARKET CALIBRATION
 // ======================================================
 PSZ.runUltraSupremeEngine = function () {
     const teams = PSZ.getTeams();
 
-    // pastikan modul inti sudah terisi
+    // Pastikan modul inti terisi dari input paling baru
     const TCI        = PSZ.state.tci_profile || PSZ.autoTCI();
     const dxg        = PSZ.state.dxg         || PSZ.dynamicXG();
     const prime      = PSZ.state.prime       || PSZ.runPrime();
@@ -1598,6 +1599,7 @@ PSZ.runUltraSupremeEngine = function () {
     const identity   = PSZ.state.team_identity || PSZ.runTeamIdentity();
     const mc         = PSZ.state.montecarlo  || PSZ.runMonteCarloScores();
     const variance   = PSZ.state.variance    || PSZ.runVarianceEngine();
+    const marketEdge = PSZ.state.market_edge || null; // hanya jika sudah dijalankan
 
     const tempoG = TCI.tempo?.global ?? (
         ((TCI.tempoH || 5) + (TCI.tempoA || 5)) / 2
@@ -1612,52 +1614,142 @@ PSZ.runUltraSupremeEngine = function () {
         return "DRAW";
     };
 
-    const mainPrime = pickSide(prime.pHome, prime.pDraw, prime.pAway);
+    // Sisi utama dari masing-masing model
+    const mainPrime = pickSide(prime.pHome,     prime.pDraw,     prime.pAway);
     const mainComp  = pickSide(composite.pHome, composite.pDraw, composite.pAway);
-    const mainMC    = pickSide(mc.pHome, mc.pDraw, mc.pAway);
+    const mainMC    = pickSide(mc.pHome,        mc.pDraw,        mc.pAway);
 
-    let consensusCount = 0;
-    if (mainPrime === mainComp) consensusCount++;
-    if (mainPrime === mainMC) consensusCount++;
-    if (mainComp  === mainMC) consensusCount++;
+    // Cek konsensus
+    let consensusScore = 0;
+    if (mainPrime === mainComp) consensusScore++;
+    if (mainPrime === mainMC)   consensusScore++;
+    if (mainComp  === mainMC)   consensusScore++;
 
     let consensusLabel = "MODEL TERPECAH (tidak satu suara)";
-    if (consensusCount === 3) consensusLabel = "MODEL SANGAT SEPAKAT";
-    else if (consensusCount === 2) consensusLabel = "MODEL CENDERUNG SEPAKAT";
+    if (consensusScore === 3) consensusLabel = "MODEL SANGAT SEPAKAT";
+    else if (consensusScore === 2) consensusLabel = "MODEL CENDERUNG SEPAKAT";
 
-    const cIndex   = confidence.cIndex ?? 50;
-    const predict  = confidence.predictability ?? 5;
-    const varIdx   = variance.varianceIndex ?? 5;
-    const shockIdx = variance.shockIndex ?? 5;
+    const cIndex   = confidence.cIndex ?? 50;          // 0–100
+    const predict  = confidence.predictability ?? 5;   // 0–10
+    const varIdx   = variance.varianceIndex ?? 5;      // 0–10
+    const shockIdx = variance.shockIndex ?? 5;         // 0–10
 
-    // Prediction Stability Index (0–100)
+    // ------------------------------
+    // 1) PREDICTION STABILITY INDEX (0–100)
+    // ------------------------------
     let stability = 0;
-    stability += cIndex * 0.5;
-    stability += (10 - varIdx) * 3;
-    stability += predict * 2;
-    stability -= shockIdx * 1.5;
+    stability += cIndex * 0.5;                   // bobot besar confidence
+    stability += (10 - varIdx) * 3.0;            // variance kecil → stabil
+    stability += predict * 2.0;                  // predictability tinggi → stabil
+    stability -= shockIdx * 1.5;                 // shock tinggi → turunkan stabilitas
 
-    if (stability < 0) stability = 0;
+    if (stability < 0)   stability = 0;
     if (stability > 100) stability = 100;
 
     let stabilityTag = "VOLATILE";
-    if (stability >= 70) stabilityTag = "STABLE";
+    if (stability >= 70)      stabilityTag = "STABLE";
     else if (stability >= 45) stabilityTag = "SEMI-STABLE";
 
-    // Rekomendasi ringkas Ultra Supreme
-    let ultraSide = mainComp; // composite sebagai referensi utama
+    const stabNorm = stability / 100;    // 0–1
+
+    // ------------------------------
+    // 2) GABUNG PRIME + COMPOSITE + MONTE CARLO
+    // ------------------------------
+    // Bobot dasar
+    let wPrime = 0.30;
+    let wComp  = 0.40;
+    let wMC    = 0.30;
+
+    // Jika stabil, lebih berat ke Composite & Prime
+    wComp  += stabNorm * 0.15;
+    wPrime += stabNorm * 0.05;
+    wMC    -= stabNorm * 0.20;
+
+    // Jika sangat volatile, naikkan sedikit bobot Monte Carlo
+    if (stability < 40) {
+        wMC    += 0.20;
+        wPrime -= 0.10;
+        wComp  -= 0.10;
+    }
+
+    // Normalisasi bobot
+    const wSum = wPrime + wComp + wMC;
+    wPrime /= wSum;
+    wComp  /= wSum;
+    wMC    /= wSum;
+
+    const mixProb = (pP, pC, pM) => {
+        return wPrime * pP + wComp * pC + wMC * pM;
+    };
+
+    let pFinalHome = mixProb(prime.pHome, composite.pHome, mc.pHome);
+    let pFinalDraw = mixProb(prime.pDraw, composite.pDraw, mc.pDraw);
+    let pFinalAway = mixProb(prime.pAway, composite.pAway, mc.pAway);
+
+    // Normalisasi
+    const sMix = pFinalHome + pFinalDraw + pFinalAway;
+    pFinalHome /= sMix;
+    pFinalDraw /= sMix;
+    pFinalAway /= sMix;
+
+    // ------------------------------
+    // 3) SOFT MARKET CALIBRATION (opsional, hanya jika odds penuh)
+    // ------------------------------
+    let pCalHome = pFinalHome;
+    let pCalDraw = pFinalDraw;
+    let pCalAway = pFinalAway;
+    let useMarket = false;
+
+    const oh = PSZ.num("odds_home");
+    const od = PSZ.num("odds_draw");
+    const oa = PSZ.num("odds_away");
+
+    if (oh > 0 && od > 0 && oa > 0) {
+        useMarket = true;
+        const pMktH = 1 / oh;
+        const pMktD = 1 / od;
+        const pMktA = 1 / oa;
+        const sumM  = pMktH + pMktD + pMktA;
+        const mH = pMktH / sumM;
+        const mD = pMktD / sumM;
+        const mA = pMktA / sumM;
+
+        // alpha = seberapa percaya ke model vs market
+        // stabilitas tinggi → alpha lebih besar ke model
+        const alpha = 0.4 + stabNorm * 0.4; // 0.4–0.8
+        const beta  = 1 - alpha;
+
+        pCalHome = alpha * pFinalHome + beta * mH;
+        pCalDraw = alpha * pFinalDraw + beta * mD;
+        pCalAway = alpha * pFinalAway + beta * mA;
+
+        const sCal = pCalHome + pCalDraw + pCalAway;
+        pCalHome /= sCal;
+        pCalDraw /= sCal;
+        pCalAway /= sCal;
+    }
+
+    const fmt = (x) => (x * 100).toFixed(2);
+
+    // Sisi utama final (sesudah kalibrasi jika ada)
+    const mainFinal = pickSide(pCalHome, pCalDraw, pCalAway);
+
     let ultraSideText = "";
-    if (ultraSide === "HOME") ultraSideText = "HOME / 1X (sesuai odds dan konteks).";
-    else if (ultraSide === "AWAY") ultraSideText = "AWAY / X2 (sesuai odds dan konteks).";
-    else ultraSideText = "DRAW atau handicap tipis.";
+    if (mainFinal === "HOME") {
+        ultraSideText = "Fokus ke sisi HOME (bisa 1 atau 1X sesuai odds dan profil risiko).";
+    } else if (mainFinal === "AWAY") {
+        ultraSideText = "Fokus ke sisi AWAY (bisa 2 atau X2 sesuai odds dan profil risiko).";
+    } else {
+        ultraSideText = "Polanya condong ke DRAW / handicap tipis, sesuaikan dengan nilai odds.";
+    }
 
     let ultraOU = "";
     if (ou.tag === "HIGH OVER ZONE") {
-        ultraOU = "Pasar gol cenderung ke arah over.";
+        ultraOU = "Karakter match condong ke over gol.";
     } else if (ou.tag === "LOW / UNDER ZONE") {
-        ultraOU = "Pasar gol cenderung ke arah under.";
+        ultraOU = "Karakter match condong ke under gol.";
     } else {
-        ultraOU = "Zona netral OU, perlu konfirmasi odds dan kondisi match.";
+        ultraOU = "Zona OU netral, perlu pertimbangan odds dan konteks pertandingan.";
     }
 
     const homeID = identity.homeTags ? identity.homeTags.join(", ") : "-";
@@ -1665,17 +1757,29 @@ PSZ.runUltraSupremeEngine = function () {
 
     const txt = [];
     txt.push("================================================");
-    txt.push("=== ULTRA SUPREME ENGINE — FINAL META LAYER ===");
+    txt.push("=== ULTRA SUPREME ENGINE v2 (FINAL META AI) ===");
     txt.push("================================================");
-    txt.push(`Match               : ${teams.home} vs ${teams.away}`);
-    txt.push(`Tempo / Chaos       : ${tempoG.toFixed(2)} / ${chaosG.toFixed(2)}`);
-    txt.push(`Dynamic xG Total    : ${dxg.total_xg.toFixed(2)}`);
+    txt.push(`Match                : ${teams.home} vs ${teams.away}`);
+    txt.push(`Tempo / Chaos        : ${tempoG.toFixed(2)} / ${chaosG.toFixed(2)}`);
+    txt.push(`Dynamic xG Total     : ${dxg.total_xg.toFixed(2)}`);
     txt.push("");
-    txt.push("MODEL UTAMA (PRIME / COMPOSITE / MONTE CARLO):");
-    txt.push(`- Prime main side      : ${mainPrime}`);
-    txt.push(`- Composite main side  : ${mainComp}`);
+    txt.push("RINGKASAN MODEL UTAMA:");
+    txt.push(`- PRIME main side      : ${mainPrime}`);
+    txt.push(`- COMPOSITE main side  : ${mainComp}`);
     txt.push(`- Monte Carlo main side: ${mainMC}`);
     txt.push(`- Status konsensus     : ${consensusLabel}`);
+    txt.push("");
+    txt.push("PREDIKSI 1X2 (GABUNG PRIME + COMPOSITE + MONTE CARLO):");
+    txt.push(`- HOME : ${fmt(pFinalHome)} %`);
+    txt.push(`- DRAW : ${fmt(pFinalDraw)} %`);
+    txt.push(`- AWAY : ${fmt(pFinalAway)} %`);
+    if (useMarket) {
+        txt.push("");
+        txt.push("Setelah kalibrasi lembut dengan odds (market):");
+        txt.push(`- HOME : ${fmt(pCalHome)} %`);
+        txt.push(`- DRAW : ${fmt(pCalDraw)} %`);
+        txt.push(`- AWAY : ${fmt(pCalAway)} %`);
+    }
     txt.push("");
     txt.push("INDIKATOR STABILITAS:");
     txt.push(`- Confidence Index        : ${cIndex.toFixed(1)} / 100 (${confidence.tag || "-"})`);
@@ -1684,19 +1788,24 @@ PSZ.runUltraSupremeEngine = function () {
     txt.push(`- Shock Potential         : ${shockIdx.toFixed(2)} / 10`);
     txt.push(`- Prediction StabilityIdx : ${stability.toFixed(1)} / 100 → ${stabilityTag}`);
     txt.push("");
-    txt.push("TEAM IDENTITY:");
+    txt.push("TEAM IDENTITY (ringkas):");
     txt.push(`- ${teams.home}: ${homeID}`);
     txt.push(`- ${teams.away}: ${awayID}`);
     txt.push("");
-    txt.push("REKOMENDASI RINGKAS ULTRA SUPREME (berdasarkan input saat ini):");
-    txt.push(`- Sisi utama 1X2 model  : ${ultraSide}`);
-    txt.push(`- Terjemahan praktis    : ${ultraSideText}`);
-    txt.push(`- Pola OU/BTTS          : ${ultraOU}`);
-    txt.push(`- Mode Infinity         : ${infinity.safeMode ? "SAFE / CONTROL" : "AGGRESSIVE / CHAOTIC"}`);
+    txt.push("REKOMENDASI RINGKAS ULTRA SUPREME v2 (berdasarkan input saat ini):");
+    txt.push(`- Sisi utama 1X2 final   : ${mainFinal}`);
+    txt.push(`- Interpretasi praktis   : ${ultraSideText}`);
+    txt.push(`- Pola OU/BTTS           : ${ultraOU}`);
+    txt.push(`- Mode Infinity          : ${infinity.safeMode ? "SAFE / CONTROL" : "AGGRESSIVE / CHAOTIC"}`);
+    if (!useMarket) {
+        txt.push("");
+        txt.push("Catatan: odds belum lengkap, kalibrasi market tidak diaktifkan. Semua angka murni dari model statistik.");
+    } else {
+        txt.push("");
+        txt.push("Catatan: kalibrasi odds sudah diterapkan secara lembut. Model tetap dominan, market hanya menjadi penyeimbang.");
+    }
     txt.push("");
-    txt.push("Catatan:");
-    txt.push("- Semua hasil di atas murni dari data yang baru saja diinput.");
-    txt.push("- Gunakan bersamaan dengan informasi aktual (lineup, kondisi fisik, jadwal).");
+    txt.push("Semua hasil di atas adalah hasil perhitungan dari data yang diisi saat ini. Selalu kombinasikan dengan informasi aktual sebelum keputusan final.");
     txt.push("");
 
     PSZ.log(txt.join("\n"));
@@ -1705,16 +1814,15 @@ PSZ.runUltraSupremeEngine = function () {
         stability,
         stabilityTag,
         consensusLabel,
-        ultraSide,
+        pFinal: { home: pFinalHome, draw: pFinalDraw, away: pFinalAway },
+        pCal:   { home: pCalHome,   draw: pCalDraw,   away: pCalAway   },
+        mainFinal,
         ultraSideText,
         ultraOU
     };
     return PSZ.state.ultra_supreme;
 };
-
     
-
-
 // ======================================================
 
 // BIND TOMBOL + STARTUP
