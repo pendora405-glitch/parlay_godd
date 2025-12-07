@@ -1698,24 +1698,36 @@ PSZ.autoTools = {
     },
 
     detectTournament(homeName, awayName, leagueTypeRaw) {
-        const isNTH = this.isNational(homeName);
-        const isNTA = this.isNational(awayName);
+    const isNTH = this.isNational(homeName);
+    const isNTA = this.isNational(awayName);
 
-        if (isNTH || isNTA) {
-            const lt = leagueTypeRaw;
-            if (lt.includes("world"))    return "worldcup";
-            if (lt.includes("euro"))     return "euro";
-            if (lt.includes("copa"))     return "copa";
-            if (lt.includes("afcon"))    return "afcon";
-            if (lt.includes("asia"))     return "asiancup";
-            if (lt.includes("aff"))      return "aff";
-            if (lt.includes("qual"))     return "qualifier";
-            if (lt.includes("friend"))   return "friendly";
-            // default nasional
-            return "friendly";
-        }
-        return null; // bukan match antar negara
-    },
+    // Jika salah satu adalah tim nasional → ini match antar negara
+    if (isNTH || isNTA) {
+        const lt = leagueTypeRaw;
+
+        if (lt.includes("world"))      return "worldcup";
+        if (lt.includes("wc"))         return "worldcup";
+        if (lt.includes("euro"))       return "euro";
+        if (lt.includes("copa"))       return "copa";
+        if (lt.includes("america"))    return "copa";
+        if (lt.includes("afcon"))      return "afcon";
+        if (lt.includes("asia"))       return "asiancup";
+        if (lt.includes("asian"))      return "asiancup";
+        if (lt.includes("aff"))        return "aff";
+        if (lt.includes("asean"))      return "aff";
+        if (lt.includes("sea"))        return "aff";
+        if (lt.includes("friend"))     return "friendly";
+        if (lt.includes("test"))       return "friendly";
+        if (lt.includes("qual"))       return "qualifier";
+        if (lt.includes("qf"))         return "qualifier";
+
+        // default fallback antar negara
+        return "friendly";
+    }
+
+    // bukan tim nasional → bukan turnamen negara
+    return null;
+},
 
     /* ================================
        3. APPLY PRESET (LIGA / NT)
