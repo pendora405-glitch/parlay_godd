@@ -465,11 +465,11 @@ PSZ.dynamicXG = () => {
     // Pastikan state container
     PSZ.state = PSZ.state || {};
 
-    // Ambil xG & xGA basic
-    const xgH  = PSZ.num("home_xg");
-    const xgA  = PSZ.num("away_xg");
-    const xgaH = PSZ.num("home_xga");
-    const xgaA = PSZ.num("away_xga");
+    // Ambil xG & xGA basic (pakai ID UI yang benar)
+const xgH  = PSZ.num("xg_home")  || PSZ.num("home_xg");
+const xgA  = PSZ.num("xg_away")  || PSZ.num("away_xg");
+const xgaH = PSZ.num("xga_home") || PSZ.num("home_xga");
+const xgaA = PSZ.num("xga_away") || PSZ.num("away_xga");
 
     // Ambil momentum, pressing, error, stability
     const momH   = PSZ.num("home_mom");
@@ -478,8 +478,9 @@ PSZ.dynamicXG = () => {
     const stabA  = PSZ.num("away_stab");
     const errH   = PSZ.num("home_err");
     const errA   = PSZ.num("away_err");
-    const pressH = PSZ.num("home_press");
-    const pressA = PSZ.num("away_press");
+    const pressPack = PSZ.getPressingNumeric();
+const pressH = pressPack.home_press;
+const pressA = pressPack.away_press;
 
     // Ambil TCI (Tempo / Chaos / Importance)
     const tci = PSZ.runTCI();
@@ -677,8 +678,9 @@ PSZ.runHybrid = () => {
     const stabA  = PSZ.num("away_stab");
     const errH   = PSZ.num("home_err");
     const errA   = PSZ.num("away_err");
-    const pressH = PSZ.num("home_press");
-    const pressA = PSZ.num("away_press");
+    const pressPack = PSZ.getPressingNumeric();
+const pressH = pressPack.home_press;
+const pressA = pressPack.away_press;
 
     // Normalisasi beberapa faktor
     const nMomDiff   = PSZ.clamp((momH - momA) / 10, -1, 1);
