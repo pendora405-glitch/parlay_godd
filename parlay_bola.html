@@ -98,160 +98,188 @@
 </head>
 
 <body>
-  <!-- =========================================== -->
-<!-- PART 1 — FULL INPUT PANEL (PSZ BASE REBUILD) -->
-<!-- =========================================== -->
+<!-- ========================================= -->
+<!-- PART 1 — FIXED UI (FULL INPUT SYNC)      -->
+<!-- ========================================= -->
 
-<div id="input_panel" class="panel">
+<div style="padding:15px; font-family:Arial;">
 
-    <h2>⚽ Match Input — Prime Singularity Zero Base</h2>
+<h2>⚽ PRIME SINGULARITY ZERO — MATCH INPUT</h2>
 
-    <!-- ======================== -->
-    <!-- SECTION A : TEAM & MATCH -->
-    <!-- ======================== -->
-    <div class="card">
-        <label>Home Team</label>
-        <input id="home_team" type="text">
+<!-- ========================= -->
+<!-- 1. TEAM & MATCH CONTEXT   -->
+<!-- ========================= -->
+<h3>Team & Match Info</h3>
 
-        <label>Away Team</label>
-        <input id="away_team" type="text">
+<label>Home Team:</label>
+<input id="home_team" type="text" placeholder="Home Team"><br>
 
-        <label>Match Type</label>
-        <select id="match_type">
-            <option value="league">League</option>
-            <option value="cup">Cup</option>
-            <option value="continental">Continental</option>
-            <option value="derby">Derby</option>
-            <option value="relegation">Relegation</option>
-        </select>
+<label>Away Team:</label>
+<input id="away_team" type="text" placeholder="Away Team"><br>
 
-        <label>Match Importance (0–10)</label>
-        <input id="match_importance" type="number" min="0" max="10">
-    </div>
+<label>League Type:</label>
+<select id="league_type">
+    <option value="league">League</option>
+    <option value="cup">Cup</option>
+    <option value="ucl">Champions League</option>
+    <option value="uel">Europa League</option>
+    <option value="uconf">Conference League</option>
+    <option value="playoff">Playoff</option>
+</select>
+<br><br>
 
-    <!-- ======================== -->
-    <!-- SECTION B : XG / XGA -->
-    <!-- ======================== -->
-    <div class="card">
-        <label>Home xG</label>
-        <input id="home_xg" type="number" step="0.01">
+<label>Match Importance (1–10):</label>
+<input id="match_importance" type="number" min="1" max="10" value="5">
+<br><br>
 
-        <label>Away xG</label>
-        <input id="away_xg" type="number" step="0.01">
 
-        <label>Home xGA</label>
-        <input id="home_xga" type="number" step="0.01">
+<!-- ========================= -->
+<!-- 2. TEMPO / CHAOS (TCI)    -->
+<!-- ========================= -->
+<h3>Tempo & Chaos (TCI Engine Input)</h3>
 
-        <label>Away xGA</label>
-        <input id="away_xga" type="number" step="0.01">
-    </div>
+<label>Home Tempo (0–10):</label>
+<input id="home_tempo" type="number" min="0" max="10" value="5"><br>
 
-    <!-- ======================== -->
-    <!-- SECTION C : DEFENSIVE    -->
-    <!-- ======================== -->
-    <div class="card">
-        <label>Home Defensive Error</label>
-        <input id="home_err" type="number" step="0.01">
+<label>Away Tempo (0–10):</label>
+<input id="away_tempo" type="number" min="0" max="10" value="5"><br>
 
-        <label>Away Defensive Error</label>
-        <input id="away_err" type="number" step="0.01">
+<label>Home Chaos (0–10):</label>
+<input id="home_chaos" type="number" min="0" max="10" value="5"><br>
 
-        <label>Home Stability</label>
-        <input id="home_stab" type="number" step="0.01">
+<label>Away Chaos (0–10):</label>
+<input id="away_chaos" type="number" min="0" max="10" value="5"><br><br>
 
-        <label>Away Stability</label>
-        <input id="away_stab" type="number" step="0.01">
-    </div>
 
-    <!-- ======================== -->
-    <!-- SECTION D : MOMENTUM -->
-    <!-- ======================== -->
-    <div class="card">
-        <label>Home Momentum (0–10)</label>
-        <input id="home_mom" type="number" min="0" max="10">
+<!-- ========================= -->
+<!-- 3. PRESSING + PPDA        -->
+<!-- ========================= -->
+<h3>Pressing & PPDA</h3>
 
-        <label>Away Momentum (0–10)</label>
-        <input id="away_mom" type="number" min="0" max="10">
-    </div>
+<label>Home Pressing Style:</label>
+<select id="home_press">
+    <option value="ultra_high">Ultra High</option>
+    <option value="high">High</option>
+    <option value="medium">Medium</option>
+    <option value="low">Low</option>
+</select><br>
 
-    <!-- ======================== -->
-    <!-- SECTION E : PRESSING -->
-    <!-- ======================== -->
-    <div class="card">
-        <h3>Pressing Metrics</h3>
+<label>Away Pressing Style:</label>
+<select id="away_press">
+    <option value="ultra_high">Ultra High</option>
+    <option value="high">High</option>
+    <option value="medium">Medium</option>
+    <option value="low">Low</option>
+</select><br>
 
-        <label>PPDA Home</label>
-        <input id="ppda_home" type="number" step="0.01">
+<label>PPDA Home:</label>
+<input id="ppda_home" type="number" step="0.1"><br>
 
-        <label>PPDA Away</label>
-        <input id="ppda_away" type="number" step="0.01">
+<label>PPDA Away:</label>
+<input id="ppda_away" type="number" step="0.1"><br><br>
 
-        <label>Pressing Strength Home (0–10)</label>
-        <input id="home_press" type="number" min="0" max="10">
 
-        <label>Pressing Strength Away (0–10)</label>
-        <input id="away_press" type="number" min="0" max="10">
-    </div>
+<!-- ========================= -->
+<!-- 4. MOMENTUM / STABILITY   -->
+<!-- ========================= -->
+<h3>Momentum & Stability</h3>
 
-    <!-- ============================== -->
-    <!-- SECTION F : TACKLE+INT+BLOCKS -->
-    <!-- ============================== -->
-    <div class="card">
-        <label>Home TKL+INT+Blocks</label>
-        <input id="home_tib" type="number">
+<label>Home Momentum (0–10):</label>
+<input id="home_mom" type="number" min="0" max="10" value="5"><br>
 
-        <label>Away TKL+INT+Blocks</label>
-        <input id="away_tib" type="number">
-    </div>
+<label>Away Momentum (0–10):</label>
+<input id="away_mom" type="number" min="0" max="10" value="5"><br>
 
-    <!-- ============================== -->
-    <!-- SECTION G : MARKET ODDS -->
-    <!-- ============================== -->
-    <div class="card">
-        <label>Odds Home</label>
-        <input id="odds_home" type="number" step="0.01">
+<label>Home Stability (0–10):</label>
+<input id="home_stab" type="number" min="0" max="10" value="5"><br>
 
-        <label>Odds Draw</label>
-        <input id="odds_draw" type="number" step="0.01">
+<label>Away Stability (0–10):</label>
+<input id="away_stab" type="number" min="0" max="10" value="5"><br><br>
 
-        <label>Odds Away</label>
-        <input id="odds_away" type="number" step="0.01">
-    </div>
 
-</div>
+<!-- ========================= -->
+<!-- 5. DEFENSIVE ERROR        -->
+<!-- ========================= -->
+<h3>Defensive Error Index</h3>
 
-<style>
-.panel {
-    max-width: 1150px;
-    margin: auto;
-    padding: 20px;
-    font-family: Arial;
-    color: white;
-}
-.card {
-    background: #121829;
-    padding: 15px;
-    border-radius: 8px;
-    margin-bottom: 15px;
-    border: 1px solid #2a3a63;
-}
-label {
-    display: block;
-    margin-top: 5px;
-    font-size: 12px;
-    opacity: 0.9;
-}
-input, select {
-    width: 100%;
-    margin-top: 3px;
-    margin-bottom: 10px;
-    padding: 6px;
-    border-radius: 6px;
-    border: 1px solid #2c3e70;
-    background: #0c1224;
-    color: white;
-}
-          </style>
+<label>Home Defensive Error (0–10):</label>
+<input id="home_err" type="number" min="0" max="10" value="3"><br>
+
+<label>Away Defensive Error (0–10):</label>
+<input id="away_err" type="number" min="0" max="10" value="3"><br><br>
+
+
+<!-- ========================= -->
+<!-- 6. DEFENSIVE ACTIONS      -->
+<!-- ========================= -->
+<h3>TKL + INT + BLOCKS</h3>
+
+<label>Home Tackle+Intercept+Blocks:</label>
+<input id="home_tib" type="number" min="0" max="50"><br>
+
+<label>Away Tackle+Intercept+Blocks:</label>
+<input id="away_tib" type="number" min="0" max="50"><br><br>
+
+
+<!-- ========================= -->
+<!-- 7. XG / XGA               -->
+<!-- ========================= -->
+<h3>xG & xGA</h3>
+
+<label>Home xG:</label>
+<input id="xg_home" type="number" step="0.01"><br>
+
+<label>Away xG:</label>
+<input id="xg_away" type="number" step="0.01"><br>
+
+<label>Home xGA:</label>
+<input id="xga_home" type="number" step="0.01"><br>
+
+<label>Away xGA:</label>
+<input id="xga_away" type="number" step="0.01"><br><br>
+
+
+<!-- ========================= -->
+<!-- 8. ODDS 1X2               -->
+<!-- ========================= -->
+<h3>Odds 1X2</h3>
+
+<label>Odds Home:</label>
+<input id="odds_home" type="number" step="0.01"><br>
+
+<label>Odds Draw:</label>
+<input id="odds_draw" type="number" step="0.01"><br>
+
+<label>Odds Away:</label>
+<input id="odds_away" type="number" step="0.01"><br><br>
+
+
+<!-- ========================= -->
+<!-- 9. BUTTONS                -->
+<!-- ========================= -->
+<h3>Run Engine</h3>
+
+<button id="btn_prime">Run Prime</button>
+<button id="btn_hybrid">Run Hybrid</button>
+<button id="btn_infinity">Run Infinity</button>
+<button id="btn_ou">Run OU Heat</button>
+<button id="btn_scoregrid">Run ScoreGrid</button>
+<button id="btn_composite">Run Composite</button>
+<button id="btn_parlay">Run Parlay AI</button>
+
+<br><br>
+
+<button id="btn_analyze_all" style="background:#00a; color:#fff; padding:10px;">
+    🔥 Run Full Analysis
+</button>
+
+<br><br>
+
+<textarea id="analysis_output" style="width:100%; height:350px;"></textarea>
+
+  </div>
+
+
           <!-- ========================================= -->
 <!-- PART 2 — CORE HELPER SYSTEM (FOUNDATION) -->
 <!-- ========================================= -->
