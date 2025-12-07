@@ -266,7 +266,8 @@ Kamu tetap bisa mengubah manual setelah auto terisi.
 <button id="btn_auto_tci">⚙ Auto Tempo & Chaos (TCI)</button>
 <button id="btn_auto_mom_stab">⚙ Auto Momentum & Stability</button>
 <button id="btn_auto_all">⚙ Auto Lengkap (TCI + Momentum + Stability)</button>
-
+<button id="btn_auto_god">⚙ AUTO GOD MODE (Full)</button>
+  
 <br><br>
 
 <!-- ========================= -->
@@ -1504,13 +1505,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
 });
 </script>
-  <!-- ========================================= -->
-<!-- PART 13 — AUTO INPUT HELPER (TCI + MOM)  -->
+          <!-- ========================================= -->
+<!-- PART 13 — AUTO INPUT HELPER (GOD MODE)   -->
 <!-- ========================================= -->
 <script>
 PSZ.autoTools = {
 
-    // Ambil xG/xGA dengan dukungan dua nama ID (jaga-jaga)
+    // Ambil paket xG/xGA dari UI (support 2 nama ID supaya kompatibel)
     getXGPack() {
         const xgH  = PSZ.num("xg_home")  || PSZ.num("home_xg");
         const xgA  = PSZ.num("xg_away")  || PSZ.num("away_xg");
@@ -1519,111 +1520,147 @@ PSZ.autoTools = {
         return { xgH, xgA, xgaH, xgaA };
     },
 
-    // ===== AUTO TEMPO & CHAOS BERDASARKAN STAT =====
-    applyTCI() {
+    getContext() {
         const league = (PSZ.el("league_type")?.value || "league").toLowerCase();
-        const imp    = PSZ.num("match_importance") || 5;
+        let imp = PSZ.num("match_importance");
+        if (!imp || imp < 1 || imp > 10) imp = 5;
 
+        const oddsH = PSZ.num("odds_home");
+        const oddsD = PSZ.num("odds_draw");
+        const oddsA = PSZ.num("odds_away");
+
+        return { league, imp, oddsH, oddsD, oddsA };
+    },
+
+    // Jika pressing belum di-set, isi default dari liga
+    ensurePressing() {
+        const ctx = this.getContext();
+        const homeSel = PSZ.el("home_press");
+        const awaySel = PSZ.el("away_press");
+
+        const defaultByLeague = (side = "home") => {
+            if (ctx.league === "ucl" || ctx.league === "playoff") return "high";
+            if (ctx.league === "uel" || ctx.league === "uconf")  return "medium";
+            if (ctx.league === "league") return side === "home" ? "high" : "medium";
+            if (ctx.league === "cup") return "medium";
+            return "medium";
+        };
+
+        if (homeSel && !homeSel.value) homeSel.value = defaultByLeague("home");
+        if (awaySel && !awaySel.value) awaySel.value = defaultByLeague("away");
+    },
+
+    // ==== AUTO TCI ADVANCED (Tempo + Chaos) ====
+    applyTCI() {
+        this.ensurePressing();
+
+        const ctx   = this.getContext();
         const { xgH, xgA, xgaH, xgaA } = this.getXGPack();
         const tibH  = PSZ.num("home_tib");
         const tibA  = PSZ.num("away_tib");
         const errH  = PSZ.num("home_err");
         const errA  = PSZ.num("away_err");
-
         const press = PSZ.getPressingNumeric();
         const ppda  = PSZ.autoPPDA();
 
-        // Base tempo by league type
+        // Base tempo per liga
         let baseTempo = 5.5;
-        if (league === "ucl") baseTempo = 6.5;
-        else if (league === "uel") baseTempo = 6.0;
-        else if (league === "uconf") baseTempo = 5.7;
-        else if (league === "cup") baseTempo = 5.0;
-        else if (league === "playoff") baseTempo = 6.0;
+        let baseChaos = 4.5;
 
-        // Importance menurunkan tempo (match penting → lebih hati-hati)
-        const impAdj = -(imp - 5) / 10 * 2; // -1..+1
+        switch (ctx.league) {
+            case "ucl":
+                baseTempo = 6.4; baseChaos = 5.2; break;
+            case "uel":
+                baseTempo = 6.0; baseChaos = 5.0; break;
+            case "uconf":
+                baseTempo = 5.8; baseChaos = 5.1; break;
+            case "playoff":
+                baseTempo = 6.2; baseChaos = 4.7; break;
+            case "cup":
+                baseTempo = 5.3; baseChaos = 4.9; break;
+            case "league":
+            default:
+                baseTempo = 5.6; baseChaos = 4.7; break;
+        }
 
-        // Helper buat per tim
-        const buildTempo = (xg, pressVal, ppdaVal) => {
-            const atkBoost   = PSZ.clamp((xg - 1.0) * 2.5, -2, 3);      // xG >1 dorong tempo
-            const pressBoost = PSZ.clamp((pressVal - 5) / 5 * 2, -1.5, 2); // press tinggi → tempo naik
-            const ppdaBoost  = PSZ.clamp((10 - ppdaVal) / 10 * 2, -1.5, 2); // ppda kecil → tempo naik
+        // Importance: semakin penting → tempo & chaos sedikit turun
+        const impAdjTempo  = -(ctx.imp - 5) / 10 * 1.2;  // -0.6..+0.6
+        const impAdjChaos  = -(ctx.imp - 5) / 10 * 1.0;
 
-            let t = baseTempo + atkBoost + pressBoost + ppdaBoost + impAdj;
+        const buildTempo = (xg, pressVal, ppdaVal, side = "home") => {
+            const atkBoost   = PSZ.clamp((xg - 1.0) * 2.8, -2.2, 3.5);
+            const pressBoost = PSZ.clamp((pressVal - 5) / 5 * 2.2, -1.8, 2.4);
+            const ppdaBoost  = PSZ.clamp((10 - ppdaVal) / 10 * 2.0, -1.8, 2.2);
+
+            let t = baseTempo + atkBoost + pressBoost + ppdaBoost + impAdjTempo;
+            // Sedikit bias: home biasanya drive tempo lebih
+            if (side === "home") t += 0.3;
             return PSZ.clamp(t, 1, 10);
         };
 
-        const tempoH = buildTempo(xgH, press.home_press, ppda.ppda_home);
-        const tempoA = buildTempo(xgA, press.away_press, ppda.ppda_away);
+        const tempoH = buildTempo(xgH, press.home_press, ppda.ppda_home, "home");
+        const tempoA = buildTempo(xgA, press.away_press, ppda.ppda_away, "away");
 
-        // ==== CHAOS ====
-        // Chaos dari error, TIB (banyak duel), dan pressing agresif
-        const buildChaos = (err, tib, pressVal, xga) => {
-            const nErr  = PSZ.norm(err, 0, 10);        // 0..1
-            const nTib  = PSZ.norm(tib, 5, 25);        // 0..1
-            const nXGA  = PSZ.norm(xga, 0.6, 2.2);     // 0..1 (kebocoran)
-            const pChaos = PSZ.clamp((pressVal - 5) / 5, -1, 1); // press tinggi → match lebih keras
+        const buildChaos = (err, tib, pressVal, xga, side="home") => {
+            const nErr  = PSZ.norm(err, 0, 10);
+            const nTib  = PSZ.norm(tib, 5, 25);
+            const nXGA  = PSZ.norm(xga, 0.6, 2.2);
+            const pChaos = PSZ.clamp((pressVal - 5) / 5, -1, 1);
 
-            let c = 3
-                + nErr * 3.2
-                + nTib * 2.0
-                + nXGA * 2.0
-                + pChaos * 1.3;
+            let c = baseChaos
+                + nErr * 3.4
+                + nTib * 2.1
+                + nXGA * 2.2
+                + pChaos * 1.4
+                + impAdjChaos;
 
-            // Importance nurunin chaos juga
-            c += -(imp - 5) / 10 * 2;
+            // Away sering lebih chaos jika underdog
+            if (side === "away") c += 0.2;
             return PSZ.clamp(c, 0, 10);
         };
 
-        const chaosH = buildChaos(errH, tibH, press.home_press, xgaH);
-        const chaosA = buildChaos(errA, tibA, press.away_press, xgaA);
+        const chaosH = buildChaos(errH, tibH, press.home_press, xgaH, "home");
+        const chaosA = buildChaos(errA, tibA, press.away_press, xgaA, "away");
 
-        // Set ke input
-        const elHT = PSZ.el("home_tempo");
-        const elAT = PSZ.el("away_tempo");
-        const elHC = PSZ.el("home_chaos");
-        const elAC = PSZ.el("away_chaos");
+        if (PSZ.el("home_tempo")) PSZ.el("home_tempo").value = tempoH.toFixed(1);
+        if (PSZ.el("away_tempo")) PSZ.el("away_tempo").value = tempoA.toFixed(1);
+        if (PSZ.el("home_chaos")) PSZ.el("home_chaos").value = chaosH.toFixed(1);
+        if (PSZ.el("away_chaos")) PSZ.el("away_chaos").value = chaosA.toFixed(1);
 
-        if (elHT) elHT.value = tempoH.toFixed(1);
-        if (elAT) elAT.value = tempoA.toFixed(1);
-        if (elHC) elHC.value = chaosH.toFixed(1);
-        if (elAC) elAC.value = chaosA.toFixed(1);
-
-        console.log("⚙ AUTO TCI APPLIED:", { tempoH, tempoA, chaosH, chaosA });
+        console.log("⚙ AUTO TCI GOD:", { tempoH, tempoA, chaosH, chaosA });
     },
 
-    // ===== AUTO MOMENTUM & STABILITY =====
+    // ==== AUTO MOMENTUM & STABILITY ADVANCED ====
     applyMomentumStability() {
         const { xgH, xgA, xgaH, xgaA } = this.getXGPack();
         const errH = PSZ.num("home_err");
         const errA = PSZ.num("away_err");
-        const imp  = PSZ.num("match_importance") || 5;
+        const ctx  = this.getContext();
 
-        // Momentum ~ seberapa banyak xG dibanding xGA (attack vs defense)
-        const buildMomentum = (xg, xga, err) => {
-            const diff = xg - xga; // bisa negatif
-            const normDiff = PSZ.clamp((diff + 1.2) / 2.4, 0, 1); // -1.2..+1.2 → 0..1
-            const lowErr = 1 - PSZ.norm(err, 0, 10);
+        const buildMomentum = (xg, xga, err, side="home") => {
+            const diff      = xg - xga;
+            const normDiff  = PSZ.clamp((diff + 1.5) / 3.0, 0, 1);    // -1.5..+1.5
+            const lowErr    = 1 - PSZ.norm(err, 0, 10);
+            let m = normDiff * 6.5 + lowErr * 3.0; // dasar 0..9.5
 
-            let m = normDiff * 7 + lowErr * 3; // 0..10
-            // Importance sedikit dorong momentum jika tim main bagus di match penting
-            m += (imp - 5) / 10 * 0.8;
+            // Importance → sedikit buff momentum kalau tim unggul
+            m += (ctx.imp - 5) / 10 * 0.8;
+
+            // Home sedikit bias momentum di match penting
+            if (side === "home" && ctx.imp >= 7) m += 0.4;
+
             return PSZ.clamp(m, 0, 10);
         };
 
-        // Stability ~ kebalikannya error & fluktuasi xGA
         const buildStability = (xga, err) => {
-            const lowErr = 1 - PSZ.norm(err, 0, 10);
+            const lowErr   = 1 - PSZ.norm(err, 0, 10);
             const solidDef = 1 - PSZ.norm(xga, 0.6, 2.2);
-
-            let s = lowErr * 6 + solidDef * 4; // 0..10
+            let s = lowErr * 6.0 + solidDef * 4.0; // 0..10
             return PSZ.clamp(s, 0, 10);
         };
 
-        const momH = buildMomentum(xgH, xgaH, errH);
-        const momA = buildMomentum(xgA, xgaA, errA);
-
+        const momH  = buildMomentum(xgH, xgaH, errH, "home");
+        const momA  = buildMomentum(xgA, xgaA, errA, "away");
         const stabH = buildStability(xgaH, errH);
         const stabA = buildStability(xgaA, errA);
 
@@ -1632,14 +1669,64 @@ PSZ.autoTools = {
         if (PSZ.el("home_stab")) PSZ.el("home_stab").value = stabH.toFixed(1);
         if (PSZ.el("away_stab")) PSZ.el("away_stab").value = stabA.toFixed(1);
 
-        console.log("⚙ AUTO MOMENTUM/STABILITY APPLIED:", { momH, momA, stabH, stabA });
+        console.log("⚙ AUTO MOM/STAB GOD:", { momH, momA, stabH, stabA });
     },
 
-    // ===== AUTO ALL (TCI + MOMENTUM + STABILITY) =====
+    // ==== AUTO ALL (TCI + MOMENTUM + STABILITY) ====
     applyAll() {
         this.applyTCI();
         this.applyMomentumStability();
-        console.log("⚙ AUTO ALL INPUTS APPLIED");
+        console.log("⚙ AUTO ALL (GOD) DONE");
+    },
+
+    // ==== AUTO GOD MODE PENUH ====
+    applyGodMode() {
+        // 1) Importance auto dari jenis laga + odds (kalau ada)
+        const ctx = this.getContext();
+        let imp = ctx.imp;
+
+        if (!imp || imp === 5) {
+            // Importance dari jenis match
+            switch (ctx.league) {
+                case "ucl":
+                case "playoff":
+                    imp = 8; break;
+                case "uel":
+                case "uconf":
+                    imp = 7; break;
+                case "cup":
+                    imp = 6; break;
+                default:
+                    imp = 5; break;
+            }
+
+            // Importance dinaikkan jika odds sangat timpang
+            if (ctx.oddsH && ctx.oddsA) {
+                const impH = 1 / ctx.oddsH;
+                const impA = 1 / ctx.oddsA;
+                const tot  = impH + impA + (ctx.oddsD ? 1/ctx.oddsD : 0);
+                const pH   = impH / tot;
+                const pA   = impA / tot;
+                const favGap = Math.abs(pH - pA);
+
+                if (favGap >= 0.18) imp += 0.5;
+                if (favGap >= 0.30) imp += 0.5;
+            }
+            imp = PSZ.clamp(imp, 3, 9);
+        }
+
+        if (PSZ.el("match_importance")) {
+            PSZ.el("match_importance").value = imp.toFixed(1);
+        }
+
+        // 2) Pastikan pressing & PPDA punya nilai
+        this.ensurePressing();
+        PSZ.autoPPDA(); // hanya ensure nilainya ada
+
+        // 3) Isi TCI + Momentum + Stability
+        this.applyAll();
+
+        console.log("🧠 AUTO GOD MODE COMPLETED (importance, TCI, momentum, stability)");
     }
 };
 
@@ -1653,6 +1740,7 @@ document.addEventListener("DOMContentLoaded", () => {
     bind("btn_auto_tci",      () => PSZ.autoTools.applyTCI());
     bind("btn_auto_mom_stab", () => PSZ.autoTools.applyMomentumStability());
     bind("btn_auto_all",      () => PSZ.autoTools.applyAll());
+    bind("btn_auto_god",      () => PSZ.autoTools.applyGodMode());
 });
 </script>
 </body>
