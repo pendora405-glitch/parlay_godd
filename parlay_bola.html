@@ -938,271 +938,243 @@ PSZ.runOUHeat = () => {
     PSZ.state.ouHeat = result;
     return result;
 };
-</script>
-<!-- ========================================= -->
-<!-- PART 9 — CORRECT SCORE GRID (v2)         -->
-<!-- ========================================= -->
+  // ===============================
+// PART 8 — TCI ENGINE v9 (Tri-Mode Auto Balanced)
+// ===============================
 
-<script>
-PSZ.runScoreGrid = () => {
-    PSZ.state = PSZ.state || {};
+PSZ.tci_engine = {
+    run() {
+        const hPress = Number($("#home_press").val() || 5);
+        const aPress = Number($("#away_press").val() || 5);
 
-    // Pastikan engine utama sudah jalan
-    const prime    = PSZ.runPrime();
-    const infinity = PSZ.runInfinity();
+        const errH = Number($("#home_err").val() || 0);
+        const errA = Number($("#away_err").val() || 0);
 
-    // Ambil prediksi gol dari PRIME & INFINITY lalu blend
-    const gH_prime = prime.goal_home;
-    const gA_prime = prime.goal_away;
-    const gH_inf   = infinity.goal_home;
-    const gA_inf   = infinity.goal_away;
+        const momH = Number($("#home_mom").val() || 5);
+        const momA = Number($("#away_mom").val() || 5);
 
-    // Infinity sedikit lebih berat (karena sudah gabung Hybrid)
-    const lambdaH = PSZ.clamp(gH_prime * 0.4 + gH_inf * 0.6, 0.01, 6);
-    const lambdaA = PSZ.clamp(gA_prime * 0.4 + gA_inf * 0.6, 0.01, 6);
+        const stabH = Number($("#home_stab").val() || 5);
+        const stabA = Number($("#away_stab").val() || 5);
 
-    // Poisson helper (gunakan factorial yang aman)
-    const factorial = n => {
-        if (n < 0) return 1;
-        let f = 1;
-        for (let i = 1; i <= n; i++) f *= i;
-        return f;
-    };
-    const poisson = (lambda, k) =>
-        (Math.pow(lambda, k) * Math.exp(-lambda)) / factorial(k);
+        const imp = Number($("#importance").val() || 5);
 
-    const maxGoal = 5;
-    const grid = [];
-    let best = { h: 0, a: 0, p: -1 };
-    let second = { h: 0, a: 0, p: -1 };
+        // MODE A (High Sensitivity)
+        const tempo_A = 4 + (hPress + aPress) * 0.18 + (errH + errA) * 0.12;
+        const chaos_A = 3 + (errH + errA) * 0.28 + Math.abs(momH - momA) * 0.22;
 
-    let sumAll = 0;
-    let total0_1 = 0;
-    let total2_3 = 0;
-    let total4plus = 0;
+        // MODE B (Stabilizer)
+        const tempo_B = 5.7 - imp * 0.08 + (stabH + stabA) * 0.03;
+        const chaos_B = 4.2 - (stabH + stabA) * 0.05;
 
-    for (let h = 0; h <= maxGoal; h++) {
-        grid[h] = [];
-        const pH = poisson(lambdaH, h);
-        for (let a = 0; a <= maxGoal; a++) {
-            const pA = poisson(lambdaA, a);
-            const p = pH * pA;
-            grid[h][a] = p;
-            sumAll += p;
+        // MODE C (Hybrid Balanced)
+        const tempo_C = (tempo_A * 0.40) + (tempo_B * 0.60);
+        const chaos_C = (chaos_A * 0.35) + (chaos_B * 0.65);
 
-            // Kategori total gol
-            const tg = h + a;
-            if (tg <= 1) total0_1 += p;
-            else if (tg <= 3) total2_3 += p;
-            else total4plus += p;
+        // Auto weight selection (Balanced Mode C)
+        const wA = 0.20;   // Mode A 20%
+        const wB = 0.30;   // Mode B 30%
+        const wC = 0.50;   // Mode C 50%
 
-            // Cari best & second
-            if (p > best.p) {
-                second = { ...best };
-                best = { h, a, p };
-            } else if (p > second.p) {
-                second = { h, a, p };
-            }
-        }
+        const finalTempo  = tempo_A * wA + tempo_B * wB + tempo_C * wC;
+        const finalChaos  = chaos_A * wA + chaos_B * wB + chaos_C * wC;
+
+        const finalImportance = imp; // no change
+
+        PSZ.state.tci_profile = {
+            tempo: Number(finalTempo.toFixed(2)),
+            chaos: Number(finalChaos.toFixed(2)),
+            importance: finalImportance
+        };
+
+        $("#tci_tempo").val(PSZ.state.tci_profile.tempo);
+        $("#tci_chaos").val(PSZ.state.tci_profile.chaos);
+        $("#tci_importance").val(finalImportance);
+
+        return PSZ.state.tci_profile;
     }
-
-    // Normalisasi total range
-    if (sumAll === 0) sumAll = 1;
-    total0_1 /= sumAll;
-    total2_3 /= sumAll;
-    total4plus /= sumAll;
-
-    const result = {
-        lambda_home: Number(lambdaH.toFixed(3)),
-        lambda_away: Number(lambdaA.toFixed(3)),
-        best_score: {
-            home: best.h,
-            away: best.a,
-            prob: Number((best.p / sumAll).toFixed(4))
-        },
-        second_best_score: {
-            home: second.h,
-            away: second.a,
-            prob: Number((second.p / sumAll).toFixed(4))
-        },
-        goal_bands: {
-            "0-1_goals": Number(total0_1.toFixed(4)),
-            "2-3_goals": Number(total2_3.toFixed(4)),
-            "4+_goals": Number(total4plus.toFixed(4))
-        },
-        grid_raw: grid  // bisa dipakai kalau mau tampilkan tabel
-    };
-
-    console.log("📊 SCORE GRID RESULT", result);
-    PSZ.state.scoreGrid = result;
-    return result;
 };
 </script>
-<!-- ========================================= -->
-<!-- PART 10 — GOD MODE LAYER                 -->
-<!--  A. Composite Model                      -->
-<!--  B. Confidence Index                     -->
-<!--  C. Market Edge Analyzer                 -->
-<!-- ========================================= -->
-
 <script>
-PSZ.runComposite = () => {
-    PSZ.state = PSZ.state || {};
+  // =========================================
+// PART 9 — HYBRID ENGINE v5 (Tri-Mode Balanced)
+// =========================================
 
-    // Ambil engine lain
-    const prime    = PSZ.runPrime();
-    const hybrid   = PSZ.runHybrid();
-    const infinity = PSZ.runInfinity();
-    const ou       = PSZ.runOUHeat();
-    const grid     = PSZ.runScoreGrid();
-    const tci      = PSZ.runTCI();
+PSZ.hybrid_engine = {
+    run() {
 
-    // ----------------------------------------
-    // A. COMPOSITE BLENDING
-    // ----------------------------------------
-    // Bobot dasar
-    let wPrime   = 0.25;
-    let wHybrid  = 0.35;
-    let wInf     = 0.40;
+        // -------------------------------
+        // 1. Ambil nilai input & TCI
+        // -------------------------------
+        const tci = PSZ.state.tci_profile || { tempo: 5.5, chaos: 5.0, importance: 5 };
 
-    // Influence TCI (tempo/chaos)
-    const T = tci.TCI_value || 0.5;
+        const xgH = Number($("#xg_home").val() || 1.2);
+        const xgA = Number($("#xg_away").val() || 1.0);
 
-    // Chaos → lebih berat Hybrid & Infinity
-    wPrime  = PSZ.clamp(wPrime  - T * 0.15, 0.10, 0.30);
-    wHybrid = PSZ.clamp(wHybrid + T * 0.10, 0.20, 0.45);
-    wInf    = PSZ.clamp(wInf    + T * 0.05, 0.30, 0.50);
+        const xgaH = Number($("#xga_home").val() || 1.1);
+        const xgaA = Number($("#xga_away").val() || 1.0);
 
-    // Normalize
-    const wSum = wPrime + wHybrid + wInf;
-    wPrime  /= wSum;
-    wHybrid /= wSum;
-    wInf    /= wSum;
+        const pressH = Number($("#home_press").val() || 5);
+        const pressA = Number($("#away_press").val() || 5);
 
-    // Hitung prediksi komposit
-    const cGH = 
-        prime.goal_home  * wPrime +
-        hybrid.goal_home * wHybrid +
-        infinity.goal_home * wInf;
+        const errH = Number($("#home_err").val() || 0);
+        const errA = Number($("#away_err").val() || 0);
 
-    const cGA =
-        prime.goal_away  * wPrime +
-        hybrid.goal_away * wHybrid +
-        infinity.goal_away * wInf;
+        const momH = Number($("#home_mom").val() || 5);
+        const momA = Number($("#away_mom").val() || 5);
 
-    const cTG = cGH + cGA;
+        const stabH = Number($("#home_stab").val() || 5);
+        const stabA = Number($("#away_stab").val() || 5);
 
-    // ----------------------------------------
-    // B. CONFIDENCE INDEX
-    // ----------------------------------------
-    // Gunakan:
-    // - selisih prediksi engine
-    // - swing probability
-    // - agree/disagree antar engine
-    const diffPH = Math.abs(prime.goal_home  - hybrid.goal_home);
-    const diffPA = Math.abs(prime.goal_away  - hybrid.goal_away);
-    const diffIH = Math.abs(infinity.goal_home - hybrid.goal_home);
-    const diffIA = Math.abs(infinity.goal_away - hybrid.goal_away);
+        // -------------------------------
+        // 2. Hitung dynamic xG (d-xG)
+        // -------------------------------
+        const tempoFactor  = (tci.tempo - 5) * 0.12;
+        const chaosFactor  = (tci.chaos - 5) * 0.10;
 
-    const avgDiff = PSZ.avg(diffPH + diffPA, diffIH + diffIA);
+        const dxgH = xgH * (1 + tempoFactor - chaosFactor + pressH * 0.015 + errA * 0.02);
+        const dxgA = xgA * (1 + tempoFactor - chaosFactor + pressA * 0.015 + errH * 0.02);
 
-    const swing = PSZ.state.infinity.swing.value;
-    const risk  = PSZ.state.infinity.risk.raw;
+        // clamping
+        const dXG_H = Math.max(0.2, Math.min(dxgH, 5.0));
+        const dXG_A = Math.max(0.2, Math.min(dxgA, 5.0));
 
-    // Confidence menurun saat chaos tinggi
-    let confidence =
-        1.0
-        - avgDiff * 0.35
-        - swing * 0.35
-        - risk  * 0.25;
+        // -------------------------------
+        // 3. MODE A — High Sensitivity
+        // -------------------------------
+        const A_home = dXG_H * 0.65 + momH * 0.04 + errA * 0.06 + pressH * 0.04;
+        const A_away = dXG_A * 0.65 + momA * 0.04 + errH * 0.06 + pressA * 0.04;
 
-    confidence = PSZ.clamp(confidence, 0, 1);
+        // -------------------------------
+        // 4. MODE B — Stabilizer
+        // -------------------------------
+        const B_home = (xgH + dXG_H * 0.35) * 0.55 + stabH * 0.05;
+        const B_away = (xgA + dXG_A * 0.35) * 0.55 + stabA * 0.05;
 
-    let confLabel = "";
-    if (confidence >= 0.70) confLabel = "HIGH CONFIDENCE";
-    else if (confidence >= 0.45) confLabel = "MODERATE CONFIDENCE";
-    else confLabel = "LOW CONFIDENCE";
+        // -------------------------------
+        // 5. MODE C — Balanced Blend
+        // -------------------------------
+        const C_home = (A_home * 0.45) + (B_home * 0.55);
+        const C_away = (A_away * 0.45) + (B_away * 0.55);
 
-    // ----------------------------------------
-    // C. MARKET EDGE ANALYZER
-    // ----------------------------------------
-    const oh = PSZ.num("odds_home");
-    const od = PSZ.num("odds_draw");
-    const oa = PSZ.num("odds_away");
+        // -------------------------------
+        // 6. Auto Weighted Combination (Balanced)
+        // -------------------------------
+        const wA = 0.20;  // high sensitivity
+        const wB = 0.30;  // stabilizer
+        const wC = 0.50;  // hybrid balanced
 
-    const ph = prime.pHome;
-    const pd = prime.pDraw;
-    const pa = prime.pAway;
+        const finalHome = A_home * wA + B_home * wB + C_home * wC;
+        const finalAway = A_away * wA + B_away * wB + C_away * wC;
 
-    // implied probability
-    const impH = oh ? 1 / oh : 0;
-    const impD = od ? 1 / od : 0;
-    const impA = oa ? 1 / oa : 0;
-    const impSum = impH + impD + impA;
-    
-    // Normalize
-    const impHN = impH / impSum;
-    const impDN = impD / impSum;
-    const impAN = impA / impSum;
+        const hybrid_home = Number(finalHome.toFixed(3));
+        const hybrid_away = Number(finalAway.toFixed(3));
 
-    // Edge = ModelProb - MarketProb
-    const edgeH = ph - impHN;
-    const edgeD = pd - impDN;
-    const edgeA = pa - impAN;
+        PSZ.state.hybrid = {
+            home: hybrid_home,
+            away: hybrid_away,
+            dxg_home: dXG_H,
+            dxg_away: dXG_A
+        };
 
-    const edgePack = [
-        { type: "HOME", edge: edgeH },
-        { type: "DRAW", edge: edgeD },
-        { type: "AWAY", edge: edgeA }
-    ];
-
-    edgePack.sort((a,b) => b.edge - a.edge); 
-
-    const topEdge = edgePack[0];
-
-    // ----------------------------------------
-    // Final result
-    // ----------------------------------------
-
-    const result = {
-        composite_goals: {
-            home: Number(cGH.toFixed(3)),
-            away: Number(cGA.toFixed(3)),
-            total: Number(cTG.toFixed(3))
-        },
-        weights: {
-            prime: Number(wPrime.toFixed(3)),
-            hybrid: Number(wHybrid.toFixed(3)),
-            infinity: Number(wInf.toFixed(3))
-        },
-        confidence: {
-            value: Number(confidence.toFixed(3)),
-            label: confLabel
-        },
-        market_edge: {
-            best: {
-                type: topEdge.type,
-                value: Number(topEdge.edge.toFixed(4))
-            },
-            detailed: {
-                home: Number(edgeH.toFixed(4)),
-                draw: Number(edgeD.toFixed(4)),
-                away: Number(edgeA.toFixed(4))
-            }
-        },
-        assist: {
-            ou_heat: ou.heat,
-            score_best: grid.best_score,
-            score_second: grid.second_best_score,
-            tci: tci.match_profile
-        }
-    };
-
-    console.log("🟣 GOD MODE — COMPOSITE RESULT", result);
-    PSZ.state.composite = result;
-    return result;
+        return PSZ.state.hybrid;
+    }
 };
 </script>
+ <script>
+   // ==========================================================
+// PART 10 — INFINITY ENGINE v5 (Adaptive Tri-Mode Final)
+// ==========================================================
+
+PSZ.infinity_engine = {
+    run() {
+
+        // ------------------------------------
+        // 1. Ambil hasil Hybrid & TCI Engine
+        // ------------------------------------
+        const hyr = PSZ.state.hybrid || { home: 1.2, away: 1.0 };
+        const tci = PSZ.state.tci_profile || { tempo: 5.5, chaos: 5.0, importance: 5 };
+
+        // dxG home/away dari hybrid
+        const dxH = hyr.dxg_home || hyr.home;
+        const dxA = hyr.dxg_away || hyr.away;
+
+        // ------------------------------------
+        // 2. Lokasi laga (Home advantage)
+        // ------------------------------------
+        const homeAdv = 0.15 + (tci.importance * 0.015);
+
+        // ------------------------------------
+        // 3. ENGINE TRI-MODE
+        // ------------------------------------
+
+        // MODE A – High sensitivity
+        const A_home = (dxH * 0.70) + homeAdv + tci.tempo * 0.06 - tci.chaos * 0.04;
+        const A_away = (dxA * 0.70) - homeAdv + tci.tempo * 0.04 - tci.chaos * 0.05;
+
+        // MODE B – Stabilizer
+        const B_home = (hyr.home * 0.60) + (dxH * 0.40) - tci.chaos * 0.03;
+        const B_away = (hyr.away * 0.60) + (dxA * 0.40) - tci.chaos * 0.03;
+
+        // MODE C – Balanced blend
+        const C_home = (A_home * 0.45) + (B_home * 0.55);
+        const C_away = (A_away * 0.45) + (B_away * 0.55);
+
+        // ------------------------------------
+        // 4. Bobot mode (Balanced preset)
+        // ------------------------------------
+        const wA = 0.20;
+        const wB = 0.30;
+        const wC = 0.50;
+
+        const finH = (A_home * wA) + (B_home * wB) + (C_home * wC);
+        const finA = (A_away * wA) + (B_away * wB) + (C_away * wC);
+
+        const predH = Math.max(0.1, Math.min(finH, 5.0));
+        const predA = Math.max(0.1, Math.min(finA, 5.0));
+
+        // ------------------------------------
+        // 5. Full dominance calculation
+        // ------------------------------------
+        const dom = (predH - predA) * 22 + (tci.tempo - tci.chaos) * 3;
+
+        const homeWinProb = Math.max(5, Math.min(80, 50 + dom * 0.55));
+        const awayWinProb = Math.max(5, Math.min(80, 50 - dom * 0.55));
+        const drawProb     = Math.max(5, 100 - (homeWinProb + awayWinProb));
+
+        // ------------------------------------
+        // 6. OU & BTTS calculation
+        // ------------------------------------
+        const totalGoals = predH + predA;
+
+        const ou25 = Math.max(
+            0,
+            Math.min(100, (totalGoals * 22) + (tci.tempo * 4) - (tci.importance * 2))
+        );
+
+        const btts = Math.max(
+            5,
+            Math.min(95, 50 + (predH * 8) + (predA * 8) - (tci.chaos * 3))
+        );
+
+        // ------------------------------------
+        // 7. Simpan state hasil Infinity Engine
+        // ------------------------------------
+        PSZ.state.infinity = {
+            predicted_home: Number(predH.toFixed(2)),
+            predicted_away: Number(predA.toFixed(2)),
+            home_prob: Number(homeWinProb.toFixed(1)),
+            draw_prob: Number(drawProb.toFixed(1)),
+            away_prob: Number(awayWinProb.toFixed(1)),
+            ou25_prob: Number(ou25.toFixed(1)),
+            btts_prob: Number(btts.toFixed(1)),
+            dominance: Number(dom.toFixed(1))
+        };
+
+        return PSZ.state.infinity;
+    }
+};
+ </script>          
+    
 <!-- ========================================= -->
 <!-- PART 11 — PARLAY AI BUILDER               -->
 <!-- SAFE / BALANCED / HIGH RISK              -->
