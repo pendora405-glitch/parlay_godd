@@ -252,7 +252,22 @@
 
 <label>Odds Away:</label>
 <input id="odds_away" type="number" step="0.01"><br><br>
+<!-- ========================= -->
+<!-- AUTO HELPER INPUT         -->
+<!-- ========================= -->
+<h3>Auto Helper (Tempo/Chaos, Momentum, Stability)</h3>
 
+<p style="font-size:11px;opacity:0.85;">
+Tombol di bawah ini hanya membantu mengisi <b>Tempo, Chaos, Momentum, dan Stability</b>
+berdasarkan data xG/xGA, Error, TIB, Pressing, dan Importance yang sudah kamu isi.
+Kamu tetap bisa mengubah manual setelah auto terisi.
+</p>
+
+<button id="btn_auto_tci">⚙ Auto Tempo & Chaos (TCI)</button>
+<button id="btn_auto_mom_stab">⚙ Auto Momentum & Stability</button>
+<button id="btn_auto_all">⚙ Auto Lengkap (TCI + Momentum + Stability)</button>
+
+<br><br>
 
 <!-- ========================= -->
 <!-- 9. BUTTONS                -->
@@ -1485,6 +1500,157 @@ document.addEventListener("DOMContentLoaded", () => {
     // Tombol FINAL PREDICTION
     bind("btn_analyze_all", formatOutput);
 
+});
+</script>
+  <!-- ========================================= -->
+<!-- PART 13 — AUTO INPUT HELPER (TCI + MOM)  -->
+<!-- ========================================= -->
+<script>
+PSZ.autoTools = {
+
+    // Ambil xG/xGA dengan dukungan dua nama ID (jaga-jaga)
+    getXGPack() {
+        const xgH  = PSZ.num("xg_home")  || PSZ.num("home_xg");
+        const xgA  = PSZ.num("xg_away")  || PSZ.num("away_xg");
+        const xgaH = PSZ.num("xga_home") || PSZ.num("home_xga");
+        const xgaA = PSZ.num("xga_away") || PSZ.num("away_xga");
+        return { xgH, xgA, xgaH, xgaA };
+    },
+
+    // ===== AUTO TEMPO & CHAOS BERDASARKAN STAT =====
+    applyTCI() {
+        const league = (PSZ.el("league_type")?.value || "league").toLowerCase();
+        const imp    = PSZ.num("match_importance") || 5;
+
+        const { xgH, xgA, xgaH, xgaA } = this.getXGPack();
+        const tibH  = PSZ.num("home_tib");
+        const tibA  = PSZ.num("away_tib");
+        const errH  = PSZ.num("home_err");
+        const errA  = PSZ.num("away_err");
+
+        const press = PSZ.getPressingNumeric();
+        const ppda  = PSZ.autoPPDA();
+
+        // Base tempo by league type
+        let baseTempo = 5.5;
+        if (league === "ucl") baseTempo = 6.5;
+        else if (league === "uel") baseTempo = 6.0;
+        else if (league === "uconf") baseTempo = 5.7;
+        else if (league === "cup") baseTempo = 5.0;
+        else if (league === "playoff") baseTempo = 6.0;
+
+        // Importance menurunkan tempo (match penting → lebih hati-hati)
+        const impAdj = -(imp - 5) / 10 * 2; // -1..+1
+
+        // Helper buat per tim
+        const buildTempo = (xg, pressVal, ppdaVal) => {
+            const atkBoost   = PSZ.clamp((xg - 1.0) * 2.5, -2, 3);      // xG >1 dorong tempo
+            const pressBoost = PSZ.clamp((pressVal - 5) / 5 * 2, -1.5, 2); // press tinggi → tempo naik
+            const ppdaBoost  = PSZ.clamp((10 - ppdaVal) / 10 * 2, -1.5, 2); // ppda kecil → tempo naik
+
+            let t = baseTempo + atkBoost + pressBoost + ppdaBoost + impAdj;
+            return PSZ.clamp(t, 1, 10);
+        };
+
+        const tempoH = buildTempo(xgH, press.home_press, ppda.ppda_home);
+        const tempoA = buildTempo(xgA, press.away_press, ppda.ppda_away);
+
+        // ==== CHAOS ====
+        // Chaos dari error, TIB (banyak duel), dan pressing agresif
+        const buildChaos = (err, tib, pressVal, xga) => {
+            const nErr  = PSZ.norm(err, 0, 10);        // 0..1
+            const nTib  = PSZ.norm(tib, 5, 25);        // 0..1
+            const nXGA  = PSZ.norm(xga, 0.6, 2.2);     // 0..1 (kebocoran)
+            const pChaos = PSZ.clamp((pressVal - 5) / 5, -1, 1); // press tinggi → match lebih keras
+
+            let c = 3
+                + nErr * 3.2
+                + nTib * 2.0
+                + nXGA * 2.0
+                + pChaos * 1.3;
+
+            // Importance nurunin chaos juga
+            c += -(imp - 5) / 10 * 2;
+            return PSZ.clamp(c, 0, 10);
+        };
+
+        const chaosH = buildChaos(errH, tibH, press.home_press, xgaH);
+        const chaosA = buildChaos(errA, tibA, press.away_press, xgaA);
+
+        // Set ke input
+        const elHT = PSZ.el("home_tempo");
+        const elAT = PSZ.el("away_tempo");
+        const elHC = PSZ.el("home_chaos");
+        const elAC = PSZ.el("away_chaos");
+
+        if (elHT) elHT.value = tempoH.toFixed(1);
+        if (elAT) elAT.value = tempoA.toFixed(1);
+        if (elHC) elHC.value = chaosH.toFixed(1);
+        if (elAC) elAC.value = chaosA.toFixed(1);
+
+        console.log("⚙ AUTO TCI APPLIED:", { tempoH, tempoA, chaosH, chaosA });
+    },
+
+    // ===== AUTO MOMENTUM & STABILITY =====
+    applyMomentumStability() {
+        const { xgH, xgA, xgaH, xgaA } = this.getXGPack();
+        const errH = PSZ.num("home_err");
+        const errA = PSZ.num("away_err");
+        const imp  = PSZ.num("match_importance") || 5;
+
+        // Momentum ~ seberapa banyak xG dibanding xGA (attack vs defense)
+        const buildMomentum = (xg, xga, err) => {
+            const diff = xg - xga; // bisa negatif
+            const normDiff = PSZ.clamp((diff + 1.2) / 2.4, 0, 1); // -1.2..+1.2 → 0..1
+            const lowErr = 1 - PSZ.norm(err, 0, 10);
+
+            let m = normDiff * 7 + lowErr * 3; // 0..10
+            // Importance sedikit dorong momentum jika tim main bagus di match penting
+            m += (imp - 5) / 10 * 0.8;
+            return PSZ.clamp(m, 0, 10);
+        };
+
+        // Stability ~ kebalikannya error & fluktuasi xGA
+        const buildStability = (xga, err) => {
+            const lowErr = 1 - PSZ.norm(err, 0, 10);
+            const solidDef = 1 - PSZ.norm(xga, 0.6, 2.2);
+
+            let s = lowErr * 6 + solidDef * 4; // 0..10
+            return PSZ.clamp(s, 0, 10);
+        };
+
+        const momH = buildMomentum(xgH, xgaH, errH);
+        const momA = buildMomentum(xgA, xgaA, errA);
+
+        const stabH = buildStability(xgaH, errH);
+        const stabA = buildStability(xgaA, errA);
+
+        if (PSZ.el("home_mom"))  PSZ.el("home_mom").value  = momH.toFixed(1);
+        if (PSZ.el("away_mom"))  PSZ.el("away_mom").value  = momA.toFixed(1);
+        if (PSZ.el("home_stab")) PSZ.el("home_stab").value = stabH.toFixed(1);
+        if (PSZ.el("away_stab")) PSZ.el("away_stab").value = stabA.toFixed(1);
+
+        console.log("⚙ AUTO MOMENTUM/STABILITY APPLIED:", { momH, momA, stabH, stabA });
+    },
+
+    // ===== AUTO ALL (TCI + MOMENTUM + STABILITY) =====
+    applyAll() {
+        this.applyTCI();
+        this.applyMomentumStability();
+        console.log("⚙ AUTO ALL INPUTS APPLIED");
+    }
+};
+
+// Binding tombol auto
+document.addEventListener("DOMContentLoaded", () => {
+    const bind = (id, fn) => {
+        const el = PSZ.el(id);
+        if (el) el.addEventListener("click", fn);
+    };
+
+    bind("btn_auto_tci",      () => PSZ.autoTools.applyTCI());
+    bind("btn_auto_mom_stab", () => PSZ.autoTools.applyMomentumStability());
+    bind("btn_auto_all",      () => PSZ.autoTools.applyAll());
 });
 </script>
 </body>
