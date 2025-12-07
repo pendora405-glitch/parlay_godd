@@ -278,98 +278,112 @@
 <textarea id="analysis_output" style="width:100%; height:350px;"></textarea>
 
   </div>
-
-
-          <!-- ========================================= -->
-<!-- PART 2 — CORE HELPER SYSTEM (FOUNDATION) -->
+<!-- ========================================= -->
+<!-- PART 2 — CORE ENGINE / HELPERS (FIXED)   -->
 <!-- ========================================= -->
 
 <script>
-// Namespace utama
-const PSZ = {};
+window.PSZ = window.PSZ || {};
 
-// ========== Helper Element Getter ==========
-PSZ.el = id => document.getElementById(id);
+/* --------------------------------------------------
+   Helper mengambil elemen by ID
+-------------------------------------------------- */
+PSZ.el = (id) => document.getElementById(id);
 
-// ========== Parse Number (aman dari NaN) ==========
-PSZ.num = id => {
-  const v = parseFloat(PSZ.el(id)?.value);
-  return isNaN(v) ? 0 : v;
+/* --------------------------------------------------
+   Helper mengambil angka dari input
+-------------------------------------------------- */
+PSZ.num = (id) => {
+    const el = PSZ.el(id);
+    if (!el) return 0;
+    const val = parseFloat(el.value);
+    return isNaN(val) ? 0 : val;
 };
 
-// ========== Clamp (batasi nilai) ==========
-PSZ.clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+/* --------------------------------------------------
+   Clamp nilai pada rentang tertentu
+-------------------------------------------------- */
+PSZ.clamp = (v, min, max) => Math.min(Math.max(v, min), max);
 
-// ========== Normalize 0–1 ==========
-PSZ.norm = (value, min, max) => {
-  if (max - min === 0) return 0;
-  return PSZ.clamp((value - min) / (max - min), 0, 1);
-};
-
-// ========== Safeguard: angka tidak boleh negatif ==========
-PSZ.nonNeg = x => (x < 0 ? 0 : x);
-
-// ========== Average dua nilai ==========
+/* --------------------------------------------------
+   Average dua nilai
+-------------------------------------------------- */
 PSZ.avg = (a, b) => (a + b) / 2;
 
-// ========== Weighted average ==========
-PSZ.wavg = (a, b, w = 0.5) => (a * w + b * (1 - w));
-
-// ========== Safe Divide ==========
-PSZ.safeDiv = (a, b, fallback = 0) => (b === 0 ? fallback : a / b);
-
-// ========== Format persen ==========
-PSZ.percentage = x => (x * 100).toFixed(1) + "%";
-
-// ========== Random kecil untuk variasi ==========
-PSZ.epsilon = () => (Math.random() - 0.5) * 0.01;
-
-// ========== Hitung “match load” untuk dinamika ==========
-PSZ.matchLoad = () => {
-  const momH = PSZ.num("home_mom");
-  const momA = PSZ.num("away_mom");
-  const stabH = PSZ.num("home_stab");
-  const stabA = PSZ.num("away_stab");
-
-  const momentumEffect = PSZ.avg(momH, momA);
-  const stabilityEffect = PSZ.avg(stabH, stabA);
-
-  return PSZ.clamp((momentumEffect * 0.6 + stabilityEffect * 0.4) / 10, 0, 1);
+/* --------------------------------------------------
+   Normalisasi angka ke 0–1 berdasarkan min & max
+-------------------------------------------------- */
+PSZ.norm = (v, min = 0, max = 10) => {
+    if (max === min) return 0;
+    return PSZ.clamp((v - min) / (max - min), 0, 1);
 };
 
-// ========== Compute Advantage (Home vs Away) ==========
-PSZ.computeAdv = () => {
-  const xgH = PSZ.num("home_xg");
-  const xgA = PSZ.num("away_xg");
-  const momH = PSZ.num("home_mom");
-  const momA = PSZ.num("away_mom");
-  const pressH = PSZ.num("home_press");
-  const pressA = PSZ.num("away_press");
+/* --------------------------------------------------
+   PRESSING STYLE → NUMERIC
+   (Agar engine Hybrid/Infinity bekerja dengan benar)
+-------------------------------------------------- */
+PSZ.pressValue = (val) => {
+    if (!val) return 5;
 
-  const advXG = xgH - xgA;
-  const advMomentum = (momH - momA) * 0.1;
-  const advPress = (pressH - pressA) * 0.05;
-
-  return advXG + advMomentum + advPress;
+    switch (val.toLowerCase()) {
+        case "ultra_high": return 9;   // sangat agresif
+        case "high":       return 7;   
+        case "medium":     return 5;
+        case "low":        return 3;
+        default:           return PSZ.num(val);
+    }
 };
 
-// ========== Risk Level Detector ==========
-PSZ.riskLevel = () => {
-  const chaosH = PSZ.num("home_chaos");
-  const chaosA = PSZ.num("away_chaos");
-  const diff = Math.abs(chaosH - chaosA);
+/* --------------------------------------------------
+   PPDA FALLBACK:
+   Jika input PPDA kosong → hitung otomatis dari pressing
+-------------------------------------------------- */
+PSZ.autoPPDA = () => {
 
-  if (diff < 1) return "LOW";
-  if (diff < 3) return "MEDIUM";
-  return "HIGH";
+    let ppdaH = PSZ.num("ppda_home");
+    let ppdaA = PSZ.num("ppda_away");
+
+    // Jika user tidak isi PPDA, convert pressing → PPDA
+    if (!ppdaH) {
+        const p = PSZ.el("home_press")?.value || "medium";
+        // Semakin agresif pressing → PPDA lebih kecil
+        ppdaH = {
+            ultra_high: 6.5,
+            high:       8.0,
+            medium:    10.0,
+            low:       12.5
+        }[p] || 10.0;
+    }
+
+    if (!ppdaA) {
+        const p = PSZ.el("away_press")?.value || "medium";
+        ppdaA = {
+            ultra_high: 6.5,
+            high:       8.0,
+            medium:    10.0,
+            low:       12.5
+        }[p] || 10.0;
+    }
+
+    return { ppda_home: ppdaH, ppda_away: ppdaA };
 };
 
-// ========== Log Helper ==========
-PSZ.log = (title, data) => {
-  console.log("📌 " + title, data);
+/* --------------------------------------------------
+   Convert pressing dropdown menjadi angka 0–10
+-------------------------------------------------- */
+PSZ.getPressingNumeric = () => {
+    return {
+        home_press: PSZ.pressValue(PSZ.el("home_press")?.value),
+        away_press: PSZ.pressValue(PSZ.el("away_press")?.value)
+    };
 };
 
+/* --------------------------------------------------
+   Prepare state untuk engine lain
+-------------------------------------------------- */
+PSZ.state = {};
 </script>
+
 <!-- ========================================= -->
 <!-- PART 3 — TCI ENGINE (Tempo / Chaos / Importance) -->
 <!-- ========================================= -->
