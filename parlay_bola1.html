@@ -1856,7 +1856,145 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 </script>
   </script>
+<script>
+// ======================================================
+// V11 – OUTPUT, SAFETY WRAPPER & BINDING TOMBOL GLOBAL
+// (tidak menghapus engine lama, hanya "mengatur" tombol)
+// ======================================================
+(function () {
+    // ----- Output helper -----
+    const out = document.getElementById("analysis_output");
 
+    // Clear & log ke textarea (fallback ke console)
+    PSZ.clear = function () {
+        if (out) out.value = "";
+    };
+
+    PSZ.log = function (msg) {
+        if (out) {
+            out.value += msg + "\n";
+        } else {
+            console.log(msg);
+        }
+    };
+
+    // ----- Wrapper aman: autoPPDA + warning input + try/catch -----
+    function safe(fn, name) {
+        return function () {
+            try {
+                // bersihkan output tiap klik
+                PSZ.clear();
+
+                // pastikan PPDA terisi (kalau kosong → dari pressing)
+                if (typeof PSZ.autoPPDA === "function") {
+                    PSZ.autoPPDA();
+                }
+
+                // kalau ada sistem warning input (dari versi God/Parlay)
+                if (typeof PSZ.checkRequiredInputs === "function") {
+                    PSZ.checkRequiredInputs(false);
+                }
+
+                // jalankan engine utama
+                fn();
+            } catch (e) {
+                console.error(e);
+                alert("Error di tombol [" + name + "]. Cek console untuk detail.");
+            }
+        };
+    }
+
+    // ----- Helper binding tombol -----
+    function bind(id, fn) {
+        const btn = document.getElementById(id);
+        if (btn && typeof fn === "function") {
+            btn.onclick = safe(fn, id);
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        // PRIME → pakai runPrimeZero kalau ada, fallback ke runPrime
+        bind("btn_prime",
+            PSZ.runPrimeZero
+            || PSZ.runPrime
+        );
+
+        // HYBRID
+        bind("btn_hybrid",
+            PSZ.hybridEngine
+            || PSZ.hybrid_engine
+        );
+
+        // INFINITY
+        bind("btn_infinity",
+            PSZ.infinityEngine
+            || PSZ.infinity_engine
+        );
+
+        // OU HEAT
+        bind("btn_ou",
+            PSZ.ouHeatMap
+            || PSZ.ou_engine
+        );
+
+        // SCORE GRID
+        bind("btn_scoregrid", PSZ.scoreGrid);
+
+        // COMPOSITE / MATCH DIFFICULTY
+        bind("btn_composite",
+            (PSZ.composite_engine && typeof PSZ.composite_engine.run === "function")
+                ? () => PSZ.composite_engine.run()
+                : PSZ.matchDifficulty
+        );
+
+        // PARLAY AI / AUTO PARLAY
+        bind("btn_parlay",
+            (PSZ.autoParlayEngine && typeof PSZ.autoParlayEngine.run === "function")
+                ? () => PSZ.autoParlayEngine.run()
+                : PSZ.runParlayAI
+        );
+
+        // TOMBOL KHUSUS AUTO PARLAY BUILDER (kalau ada)
+        bind("btn_auto_parlay_builder",
+            (PSZ.autoParlayEngine && typeof PSZ.autoParlayEngine.run === "function")
+                ? () => PSZ.autoParlayEngine.run()
+                : null
+        );
+
+        // FULL ANALYSIS (semua engine penting + parlay)
+        const fullBtn = document.getElementById("btn_analyze_all");
+        if (fullBtn) {
+            fullBtn.onclick = safe(function () {
+
+                // baseline engine
+                if (typeof PSZ.runPrimeZero === "function") PSZ.runPrimeZero();
+                else if (typeof PSZ.runPrime === "function") PSZ.runPrime();
+
+                // engine turunan
+                if (typeof PSZ.hybridEngine === "function") PSZ.hybridEngine();
+                if (typeof PSZ.infinityEngine === "function") PSZ.infinityEngine();
+
+                // match style / difficulty / timeline / dxG kalau ada
+                if (typeof PSZ.matchStyle === "function") PSZ.matchStyle();
+                if (typeof PSZ.matchDifficulty === "function") PSZ.matchDifficulty();
+                if (typeof PSZ.goalWindows === "function") PSZ.goalWindows();
+                if (typeof PSZ.dynamicXG === "function") PSZ.dynamicXG();
+
+                // summary engine (jika tersedia)
+                if (PSZ.summary_engine && typeof PSZ.summary_engine.runAll === "function") {
+                    PSZ.summary_engine.runAll();
+                }
+
+                // auto parlay terakhir
+                if (PSZ.autoParlayEngine && typeof PSZ.autoParlayEngine.run === "function") {
+                    PSZ.autoParlayEngine.run();
+                }
+
+            }, "btn_analyze_all");
+        }
+    });
+})();
+  </script>
 
         
         
