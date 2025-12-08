@@ -288,7 +288,18 @@ Kamu tetap bisa mengubah manual setelah auto terisi.
 <button id="btn_analyze_all" style="background:#00a; color:#fff; padding:10px;">
     🔥 Run Full Analysis
 </button>
+<!-- AUTO PARLAY BUILDER -->
+<button id="btn_auto_parlay_builder" style="background:#0a8600; color:#fff; padding:8px 12px; margin-top:8px;">
+    🎯 Auto Parlay Builder
+</button>
 
+<br><br>
+
+<div id="auto_parlay_output" style="border:1px solid #ccc; padding:10px; font-size:14px; background:#f9f9f9;">
+    <!-- Hasil Auto Parlay akan muncul di sini -->
+</div>
+
+<br>
 <br><br>
 
 <textarea id="analysis_output" style="width:100%; height:350px;"></textarea>
@@ -1665,6 +1676,185 @@ document.addEventListener("DOMContentLoaded", () => {
     bind("btn_auto_all",      () => PSZ.autoTools.applyAll());
     bind("btn_auto_god",      () => PSZ.autoTools.applyGodMode());
 });
+  <script>
+// =======================================================
+// PART 13 — AUTO PARLAY BUILDER v1 (Output + Alasan)
+// =======================================================
+
+PSZ.autoParlayEngine = {
+    run() {
+        // Pastikan state terbaru dipakai
+        // Jalankan summary_engine supaya TCI, Hybrid, Infinity, Composite ter-update
+        if (PSZ.summary_engine && typeof PSZ.summary_engine.runAll === "function") {
+            PSZ.summary_engine.runAll();
+        }
+
+        const tci = PSZ.state.tci_profile || { tempo: 5, chaos: 5, importance: 5 };
+        const hyr = PSZ.state.hybrid || { home: 1.2, away: 1.0, dxg_home: 1.2, dxg_away: 1.0, volatility: 1.0, mom_diff: 0 };
+        const inf = PSZ.state.infinity || {
+            predicted_home: 1.0,
+            predicted_away: 1.0,
+            home_prob: 33,
+            draw_prob: 34,
+            away_prob: 33,
+            ou25_prob: 50,
+            btts_prob: 50,
+            dominance: 0,
+            volatility: 1.0
+        };
+        const comp = PSZ.state.composite || {
+            final_home: inf.predicted_home,
+            final_away: inf.predicted_away,
+            confidence: 55,
+            pick: "DRAW",
+            ouPick: (inf.ou25_prob >= 55 ? "OVER 2.5" : "UNDER 2.5"),
+            bttsPick: (inf.btts_prob >= 58 ? "YES" : "NO"),
+            dominance: inf.dominance,
+            prob_home: inf.home_prob,
+            prob_draw: inf.draw_prob,
+            prob_away: inf.away_prob
+        };
+
+        // 1) Main pick
+        const mainPick = comp.pick;
+        const ouPick   = comp.ouPick;
+        const bttsPick = comp.bttsPick;
+        const conf     = comp.confidence || 55;
+        const dom      = comp.dominance || 0;
+        const vol      = inf.volatility || 1.0;
+        const momDiff  = hyr.mom_diff || 0;
+
+        // 2) Safe bet (AH / DC)
+        let safeBet = "NO BET (terlalu seimbang)";
+        let safeReason = "Gap skor kecil atau confidence masih rendah.";
+
+        const scoreGap = comp.final_home - comp.final_away;
+
+        if (mainPick === "HOME" && conf >= 65) {
+            if (Math.abs(scoreGap) >= 0.6) {
+                safeBet = "HOME -0.25 / HOME DNB";
+                safeReason = "HOME dominan, confidence cukup tinggi, gap model mendukung.";
+            } else {
+                safeBet = "HOME +0.0 / HOME DNB";
+                safeReason = "Model condong ke HOME tapi selisih skor tidak terlalu besar.";
+            }
+        } else if (mainPick === "AWAY" && conf >= 65) {
+            if (Math.abs(scoreGap) >= 0.6) {
+                safeBet = "AWAY -0.25 / AWAY DNB";
+                safeReason = "AWAY lebih kuat dalam model, dengan margin cukup jelas.";
+            } else {
+                safeBet = "AWAY +0.0 / AWAY DNB";
+                safeReason = "Model condong ke AWAY namun masih relatif ketat.";
+            }
+        } else if (mainPick === "DRAW" && conf >= 60) {
+            safeBet = "DOUBLE CHANCE (1X atau X2)";
+            safeReason = "Pertandingan cenderung seimbang, cari perlindungan dengan DC.";
+        }
+
+        // 3) Risk level
+        let riskScore = 0;
+        riskScore += tci.chaos * 0.5;
+        riskScore += (vol - 1.0) * 6;
+        riskScore += momDiff * 0.2;
+
+        riskScore = Math.max(1, Math.min(10, riskScore));
+
+        let riskLevel = "Low";
+        if (riskScore >= 7) riskLevel = "High";
+        else if (riskScore >= 4.5) riskLevel = "Medium";
+
+        // 4) Auto parlay suggestion (3 legs)
+        const legs = [];
+        const reasons = [];
+
+        // Leg 1: Main 1X2
+        legs.push(`1X2: ${mainPick}`);
+        if (mainPick === "HOME") reasons.push("Model gabungan condong ke HOME dengan dominance dan xG yang lebih baik.");
+        else if (mainPick === "AWAY") reasons.push("Model gabungan condong ke AWAY, terutama dari sisi efektivitas serangan.");
+        else reasons.push("Model membaca laga cenderung seimbang → DRAW sebagai core pick.");
+
+        // Leg 2: OU
+        legs.push(`OU 2.5: ${ouPick}`);
+        if (ouPick.includes("OVER")) {
+            reasons.push("Tempo & total xG mengarah ke game dengan peluang gol di atas rata-rata.");
+        } else {
+            reasons.push("Importance & stabilitas pertahanan menekan jumlah gol → UNDER lebih aman.");
+        }
+
+        // Leg 3: BTTS
+        legs.push(`BTTS: ${bttsPick}`);
+        if (bttsPick === "YES") {
+            reasons.push("Kedua tim punya kapasitas serang yang cukup dan model BTTS berada di zona tinggi.");
+        } else {
+            reasons.push("Salah satu sisi berpotensi tumpul / cenderung pasif menurut model.");
+        }
+
+        const parlayText = legs.join("  |  ");
+
+        // 5) Bangun output HTML
+        const outEl = PSZ.el("auto_parlay_output");
+        if (!outEl) return comp;
+
+        const html = `
+            <div style="font-size:14px; line-height:1.5;">
+                <h3 style="margin-top:0;">🎯 AUTO PARLAY BUILDER</h3>
+
+                <b>Main Pick (1X2):</b> ${mainPick}<br>
+                <small>Alasan: ${
+                    mainPick === "HOME"
+                        ? "Model melihat HOME sedikit lebih unggul dari sisi serangan & context laga."
+                        : mainPick === "AWAY"
+                        ? "Model melihat AWAY punya edge yang lebih konsisten."
+                        : "Kekuatan relatif seimbang, peluang seri cukup besar."
+                }</small>
+                <br><br>
+
+                <b>Over/Under 2.5:</b> ${ouPick}<br>
+                <small>Alasan: ${
+                    ouPick.includes("OVER")
+                        ? "Kombinasi tempo, chaos, dan proyeksi total gol mendukung skenario laga terbuka."
+                        : "Model membaca laga cenderung tertutup / hati-hati, sehingga UNDER lebih logis."
+                }</small>
+                <br><br>
+
+                <b>BTTS:</b> ${bttsPick}<br>
+                <small>Alasan: ${
+                    bttsPick === "YES"
+                        ? "Kedua tim punya nilai xG & pattern serangan yang cukup untuk sama-sama cetak gol."
+                        : "Salah satu sisi dinilai punya peluang serang yang tidak cukup kuat untuk konsisten mencetak gol."
+                }</small>
+                <br><br>
+
+                <b>Safe Bet (konservatif):</b> ${safeBet}<br>
+                <small>Alasan: ${safeReason}</small>
+                <br><br>
+
+                <b>Risk Level:</b> ${riskLevel} (${riskScore.toFixed(1)}/10)<br>
+                <small>Chaos: ${tci.chaos.toFixed ? tci.chaos.toFixed(1) : tci.chaos} • Volatility: ${vol.toFixed ? vol.toFixed(2) : vol} • Momentum gap: ${momDiff.toFixed ? momDiff.toFixed(1) : momDiff}</small>
+                <br><br>
+
+                <b>Auto Parlay 3-Legs (satu match):</b><br>
+                ${parlayText}<br>
+                <small>Catatan: gunakan sebagai dasar. Tetap kombinasikan dengan feeling & info tim terkini (cedera, rotasi, dll).</small>
+            </div>
+        `;
+
+        outEl.innerHTML = html;
+
+        return comp;
+    }
+};
+
+// Binding tombol Auto Parlay
+document.addEventListener("DOMContentLoaded", () => {
+    const btn = PSZ.el("btn_auto_parlay_builder");
+    if (btn) {
+        btn.addEventListener("click", () => {
+            PSZ.autoParlayEngine.run();
+        });
+    }
+});
+</script>
   </script>
 
 
